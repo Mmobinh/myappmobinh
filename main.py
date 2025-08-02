@@ -104,7 +104,7 @@ async def cancel_number(site, id_):
     async with aiohttp.ClientSession() as s:
         await s.get(url)
 
-# === بررسی اعتبار شماره (اصلاح شده با لاگ و تشخیص درست) ===
+# === بررسی اعتبار شماره ===
 async def check_valid(number):
     url = "http://checker.irbots.com:2021/check"
     params = {"key": CHECKER_API_KEY, "numbers": number}
@@ -152,13 +152,18 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _, site, code = query.data.split("_")
     user_id = query.from_user.id
     cancel_flags.discard(user_id)
-    msg = await query.edit_message_text("⏳ جستجو برای شماره سالم...")
+    msg = await query.edit_message_text(
+        "⏳ جستجو برای شماره سالم...",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🚫 لغو جستجو", callback_data="cancel_search")
+        ]])
+    )
     task = asyncio.create_task(search_number(user_id, query.message.chat_id, msg.message_id, code, site, context))
     search_tasks[user_id] = task
 
 async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    await query.answer("جستجو لغو شد.", show_alert=False)
     user_id = query.from_user.id
     cancel_flags.add(user_id)
 
