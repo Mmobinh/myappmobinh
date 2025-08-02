@@ -19,11 +19,54 @@ CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
 SERVICE = "tg"
 
 # === لیست کشورها ===
+# 📍 لیست کشورهای 24sms7 (با کشورهای اضافه شده + 10 جایگاه اضافی)
 COUNTRIES_24SMS7 = {
-    "Iran": 57, "Russia": 3, "Ukraine": 4, "Mexico": 20
+    "Iran": 57,
+    "Russia": 0,
+    "Ukraine": 1,
+    "Mexico": 54,
+    "Italy": 86,
+    "Spain": 56,
+    "Czech Republic": 63,
+    "Kazakhstan": 2,
+    "Paraguay": 87,
+    "Hong Kong": 14,
+    # 10 جایگاه اضافی (با مقدار 0)
+    "Country Slot 1": 0,
+    "Country Slot 2": 0,
+    "Country Slot 3": 0,
+    "Country Slot 4": 0,
+    "Country Slot 5": 0,
+    "Country Slot 6": 0,
+    "Country Slot 7": 0,
+    "Country Slot 8": 0,
+    "Country Slot 9": 0,
+    "Country Slot 10": 0,
 }
+
+# 📍 لیست کشورهای smsbower (با کشورهای اضافه شده + 10 جایگاه اضافی)
 COUNTRIES_SMSBOWER = {
-    "Kazakhstan": 2
+    "Kazakhstan": 2,
+    "Iran": 57,
+    "Russia": 0,
+    "Ukraine": 1,
+    "Mexico": 54,
+    "Italy": 86,
+    "Spain": 56,
+    "Czech Republic": 10,
+    "Paraguay": 23,
+    "Hong Kong": 14,
+    # 10 جایگاه اضافی (با مقدار 0)
+    "Country Slot 1": 0,
+    "Country Slot 2": 0,
+    "Country Slot 3": 0,
+    "Country Slot 4": 0,
+    "Country Slot 5": 0,
+    "Country Slot 6": 0,
+    "Country Slot 7": 0,
+    "Country Slot 8": 0,
+    "Country Slot 9": 0,
+    "Country Slot 10": 0,
 }
 
 # === متغیرهای حافظه موقت ===
@@ -199,3 +242,4 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
