@@ -1,16 +1,12 @@
 import os
 import asyncio
 import logging
-import nest_asyncio
 import aiohttp
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.constants import ParseMode
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
-)
-from aiohttp import web
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
 logging.basicConfig(level=logging.INFO)
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_KEY_24SMS7 = os.getenv("API_KEY_24SMS7")
 API_KEY_SMSBOWER = os.getenv("API_KEY_SMSBOWER")
@@ -18,104 +14,63 @@ CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
 SERVICE = "tg"
 
 COUNTRIES_24SMS7 = {
-    "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
-    # 10 جایگاه اضافی (با مقدار 0)
-    "Country Slot 1": 0,
-    "Country Slot 2": 0,
-    "Country Slot 3": 0,
-    "Country Slot 4": 0,
-    "Country Slot 5": 0,
-    "Country Slot 6": 0,
-    "Country Slot 7": 0,
-    "Country Slot 8": 0,
-    "Country Slot 9": 0,
-    "Country Slot 10": 0,
+    "Iran": 57, "Russia": 0, "Ukraine": 1, "Mexico": 54, "Italy": 86, "Spain": 56,
+    "Czech Republic": 63, "Kazakhstan": 2, "Paraguay": 87, "Hong Kong": 14,
+    "Country Slot 1": 0, "Country Slot 2": 0, "Country Slot 3": 0, "Country Slot 4": 0,
+    "Country Slot 5": 0, "Country Slot 6": 0, "Country Slot 7": 0, "Country Slot 8": 0,
+    "Country Slot 9": 0, "Country Slot 10": 0,
 }
 
-# 📍 لیست کشورهای smsbower (با کشورهای اضافه شده + 10 جایگاه اضافی)
 COUNTRIES_SMSBOWER = {
-    "Kazakhstan": 2,
-    "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 10,
-    "Paraguay": 23,
-    "Hong Kong": 14,
-    # 10 جایگاه اضافی (با مقدار 0)
-    "Country Slot 1": 0,
-    "Country Slot 2": 0,
-    "Country Slot 3": 0,
-    "Country Slot 4": 0,
-    "Country Slot 5": 0,
-    "Country Slot 6": 0,
-    "Country Slot 7": 0,
-    "Country Slot 8": 0,
-    "Country Slot 9": 0,
-    "Country Slot 10": 0,
+    "Kazakhstan": 2, "Iran": 57, "Russia": 0, "Ukraine": 1, "Mexico": 54, "Italy": 86,
+    "Spain": 56, "Czech Republic": 10, "Paraguay": 23, "Hong Kong": 14,
+    "Country Slot 1": 0, "Country Slot 2": 0, "Country Slot 3": 0, "Country Slot 4": 0,
+    "Country Slot 5": 0, "Country Slot 6": 0, "Country Slot 7": 0, "Country Slot 8": 0,
+    "Country Slot 9": 0, "Country Slot 10": 0,
 }
 
 user_sessions = {}
-search_tasks = {}
 cancel_flags = set()
+search_tasks = {}
 
 async def get_number_24sms7(code):
     url = f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getNumber&service={SERVICE}&country={code}"
-    async with aiohttp.ClientSession() as s:
-        async with s.get(url) as r:
-            return await r.text()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            return await resp.text()
 
 async def get_number_smsbower(code):
     url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=58.67&providerIds=2195,2194,1000&exceptProviderIds=2196&phoneException=7700,7708"
-    async with aiohttp.ClientSession() as s:
-        async with s.get(url) as r:
-            return await r.text()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            return await resp.text()
 
 async def get_code(site, id_):
     url = {
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getStatus&id={id_}",
         "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getStatus&id={id_}",
     }[site]
-    async with aiohttp.ClientSession() as s:
-        async with s.get(url) as r:
-            return await r.text()
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            return await resp.text()
 
 async def cancel_number(site, id_):
     url = {
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=setStatus&status=8&id={id_}",
         "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=setStatus&status=8&id={id_}",
     }[site]
-    async with aiohttp.ClientSession() as s:
-        await s.get(url)
+    async with aiohttp.ClientSession() as session:
+        await session.get(url)
 
 async def check_valid(number):
     url = "http://checker.irbots.com:2021/check"
     params = {"key": CHECKER_API_KEY, "numbers": number}
     async with aiohttp.ClientSession() as session:
-        try:
-            async with session.get(url, params=params) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    logging.info(f"Checker response for {number}: {data}")
-                    valid = data.get("data", {}).get(number, False)
-                    return valid is True
-                else:
-                    logging.error(f"Checker API returned status {resp.status}")
-                    return False
-        except Exception as e:
-            logging.error(f"Exception during check_valid: {e}")
-            return False
+        async with session.get(url, params=params) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                return data.get("data", {}).get(number, False)
+    return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [
@@ -129,10 +84,7 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     site = query.data.split("_")[1]
     countries = COUNTRIES_24SMS7 if site == "24sms7" else COUNTRIES_SMSBOWER
-    buttons = [
-        [InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}")]
-        for name, id_ in countries.items()
-    ]
+    buttons = [[InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}")] for name, id_ in countries.items()]
     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
 
 async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -141,18 +93,14 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _, site, code = query.data.split("_")
     user_id = query.from_user.id
     cancel_flags.discard(user_id)
-    msg = await query.edit_message_text(
-        "⏳ جستجو برای شماره سالم...\n(شماره‌های ناسالم هم نمایش داده می‌شوند)",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🚫 لغو جستجو", callback_data="cancel_search")
-        ]])
-    )
+    buttons_cancel_search = [[InlineKeyboardButton("🚫 لغو جستجو", callback_data="cancel_search")]]
+    msg = await query.edit_message_text("⏳ جستجو برای شماره سالم...", reply_markup=InlineKeyboardMarkup(buttons_cancel_search))
     task = asyncio.create_task(search_number(user_id, query.message.chat_id, msg.message_id, code, site, context))
     search_tasks[user_id] = task
 
 async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer("جستجو لغو شد.", show_alert=False)
+    await query.answer("⛔ جستجو لغو شد.")
     user_id = query.from_user.id
     cancel_flags.add(user_id)
 
@@ -195,64 +143,54 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             return
         resp = await (get_number_24sms7(code) if site == "24sms7" else get_number_smsbower(code))
         if not resp.startswith("ACCESS_NUMBER"):
-            await asyncio.sleep(2)
+            await context.bot.edit_message_text("⏳ در حال جستجوی شماره سالم...", chat_id=chat_id, message_id=msg_id)
+            await asyncio.sleep(0.5)
             continue
-        _, id_, number = resp.split(":")[:3]
+        parts = resp.split(":")
+        if len(parts) < 3:
+            await asyncio.sleep(0.5)
+            continue
+        _, id_, number = parts[:3]
         number = f"+{number}"
         valid = await check_valid(number)
-
-        # پیام اولیه یا پیش فرض که به مرور به روز میشه
-        if valid:
-            user_sessions[user_id] = (id_, site)
-            buttons = [
-                [InlineKeyboardButton("📩 دریافت کد", callback_data="checkcode")],
-                [InlineKeyboardButton("❌ لغو شماره", callback_data="cancel_number")]
-            ]
-            await context.bot.edit_message_text(
-                f"📱 شماره سالم: <code>{number}</code>", chat_id=chat_id,
-                message_id=msg_id, parse_mode=ParseMode.HTML,
-                reply_markup=InlineKeyboardMarkup(buttons)
-            )
-            return
-        else:
-            # اگر شماره ناسالم بود پیام به‌روزرسانی می‌شود و شماره ناسالم نمایش داده می‌شود
-            await context.bot.edit_message_text(
-                f"📱 شماره ناسالم: <code>{number}</code>\n⏳ در حال جستجوی شماره سالم...",
-                chat_id=chat_id,
-                message_id=msg_id,
-                parse_mode=ParseMode.HTML,
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🚫 لغو جستجو", callback_data="cancel_search")
-                ]])
-            )
+        if not valid:
+            await context.bot.edit_message_text(f"❌ شماره ناسالم: {number}\n⏳ جستجو ادامه دارد...", chat_id=chat_id, message_id=msg_id)
             await cancel_number(site, id_)
-        await asyncio.sleep(2)
+            await asyncio.sleep(0.5)
+            continue
+        user_sessions[user_id] = (id_, site)
+        buttons = [
+            [InlineKeyboardButton("دریافت کد", callback_data="get_code")],
+            [InlineKeyboardButton("لغو شماره", callback_data="cancel_number")],
+        ]
+        await context.bot.edit_message_text(
+            f"✅ شماره سالم پیدا شد:\n`{number}`",
+            chat_id=chat_id, message_id=msg_id,
+            reply_markup=InlineKeyboardMarkup(buttons),
+            parse_mode="Markdown"
+        )
+        return
 
-async def web_handler(request):
-    return web.Response(text="✅ Bot is Alive!")
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    data = query.data
+    if data.startswith("site_"):
+        await site_selected(update, context)
+    elif data.startswith("country_"):
+        await country_selected(update, context)
+    elif data == "cancel_search":
+        await cancel_search(update, context)
+    elif data == "cancel_number":
+        await cancel_number_callback(update, context)
+    elif data == "get_code":
+        await check_code_callback(update, context)
 
-async def start_webserver():
-    app = web.Application()
-    app.add_routes([web.get('/', web_handler)])
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", 8080)
-    await site.start()
-
-async def main():
-    await start_webserver()
-
+def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
-    app.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))
-    app.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))
-    app.add_handler(CallbackQueryHandler(cancel_number_callback, pattern="^cancel_number$"))
-    app.add_handler(CallbackQueryHandler(check_code_callback, pattern="^checkcode$"))
-
-    logging.info("✅ Bot is running...")
-    await app.run_polling()
+    app.add_handler(CallbackQueryHandler(button_handler))
+    print("Bot is running...")
+    app.run_polling()
 
 if __name__ == "__main__":
-    nest_asyncio.apply()
-    asyncio.run(main())
+    main()
