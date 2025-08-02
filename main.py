@@ -15,21 +15,25 @@ API_KEY_SMSBOWER = os.getenv("API_KEY_SMSBOWER")
 CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
 SERVICE = "tg"
 
+# لیست کشورها (جایگزین با داده های شما)
 COUNTRIES_24SMS7 = {
     "Iran": 57, "Russia": 0, "Ukraine": 1, "Mexico": 54, "Italy": 86,
     "Spain": 56, "Czech Republic": 63, "Kazakhstan": 2, "Paraguay": 87,
     "Hong Kong": 14,
     "Country Slot 1": 0, "Country Slot 2": 0, "Country Slot 3": 0, "Country Slot 4": 0,
-    "Country Slot 5": 0, "Country Slot 6": 0,
+    "Country Slot 5": 0, "Country Slot 6": 0, "Country Slot 7": 0, "Country Slot 8": 0,
+    "Country Slot 9": 0, "Country Slot 10": 0,
 }
 
 COUNTRIES_SMSBOWER = {
     "Kazakhstan": 2, "Iran": 57, "Russia": 0, "Ukraine": 1, "Mexico": 54,
     "Italy": 86, "Spain": 56, "Czech Republic": 10, "Paraguay": 23, "Hong Kong": 14,
     "Country Slot 1": 0, "Country Slot 2": 0, "Country Slot 3": 0, "Country Slot 4": 0,
-    "Country Slot 5": 0, "Country Slot 6": 0,
+    "Country Slot 5": 0, "Country Slot 6": 0, "Country Slot 7": 0, "Country Slot 8": 0,
+    "Country Slot 9": 0, "Country Slot 10": 0,
 }
 
+# ذخیره وضعیت کاربران و جستجوها
 user_sessions = {}
 search_tasks = {}
 cancel_flags = set()
@@ -71,6 +75,10 @@ async def cancel_number(site, id_):
 
 
 async def check_valid(number: str) -> bool:
+    """
+    تابع چک کردن سالم بودن شماره از طریق API چکر
+    شماره را با + فرستاده و نتیجه True یا False باز میگرداند
+    """
     url = "http://checker.irbots.com:2021/check"
     params = {"key": CHECKER_API_KEY, "numbers": number}
     try:
@@ -79,9 +87,10 @@ async def check_valid(number: str) -> bool:
                 if resp.status == 200:
                     data = await resp.json()
                     status = data.get("data", {}).get(number)
+                    # True اگر شماره سالم باشد، False اگر ناسالم یا خطا
                     return bool(status)
                 else:
-                    logging.warning(f"Checker responded with status {resp.status}")
+                    logging.warning(f"Checker API status: {resp.status}")
                     return False
     except Exception as e:
         logging.error(f"Error in check_valid: {e}")
@@ -111,9 +120,10 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _, site, code = query.data.split("_")
     user_id = query.from_user.id
     cancel_flags.discard(user_id)
-    msg = await query.edit_message_text("⏳ جستجو برای شماره سالم...\n(برای لغو جستجو روی دکمه زیر کلیک کنید.)",
-                                        reply_markup=InlineKeyboardMarkup(
-                                            [[InlineKeyboardButton("❌ لغو جستجو", callback_data="cancel_search")]]))
+    msg = await query.edit_message_text(
+        "⏳ جستجو برای شماره سالم...\n(برای لغو جستجو روی دکمه زیر کلیک کنید.)",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ لغو جستجو", callback_data="cancel_search")]])
+    )
     task = asyncio.create_task(search_number(user_id, query.message.chat_id, msg.message_id, code, site, context))
     search_tasks[user_id] = task
 
@@ -185,8 +195,8 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 await asyncio.sleep(0.5)
                 continue
 
-            _, id_, number = parts[:3]
-            number = f"+{number}"
+            _, id_, number_raw = parts[:3]
+            number = f"+{number_raw}"
 
             valid = await check_valid(number)
             if valid:
@@ -204,12 +214,15 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 )
                 return
             else:
-                # نمایش شماره ناسالم و ادامه جستجو با ویرایش پیام
+                # نمایش شماره ناسالم و ادامه جستجو
                 current_text = f"📵 شماره ناسالم یافت شد: <code>{number}</code>\n⏳ ادامه جستجو..."
                 await context.bot.edit_message_text(current_text, chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML)
                 if site == "24sms7":
                     await cancel_number(site, id_)
+                # در SMSBOWER لغو خودکار ممکن نیست، فقط ادامه بده
+
             await asyncio.sleep(0.5)
+
     except asyncio.CancelledError:
         await context.bot.edit_message_text("🚫 جستجو لغو شد.", chat_id=chat_id, message_id=msg_id)
     except Exception as e:
@@ -233,4 +246,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
