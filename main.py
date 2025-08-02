@@ -20,16 +20,14 @@ COUNTRIES_24SMS7 = {
     "Spain": 56, "Czech Republic": 63, "Kazakhstan": 2, "Paraguay": 87,
     "Hong Kong": 14,
     "Country Slot 1": 0, "Country Slot 2": 0, "Country Slot 3": 0, "Country Slot 4": 0,
-    "Country Slot 5": 0, "Country Slot 6": 0, "Country Slot 7": 0, "Country Slot 8": 0,
-    "Country Slot 9": 0, "Country Slot 10": 0,
+    "Country Slot 5": 0, "Country Slot 6": 0,
 }
 
 COUNTRIES_SMSBOWER = {
     "Kazakhstan": 2, "Iran": 57, "Russia": 0, "Ukraine": 1, "Mexico": 54,
     "Italy": 86, "Spain": 56, "Czech Republic": 10, "Paraguay": 23, "Hong Kong": 14,
     "Country Slot 1": 0, "Country Slot 2": 0, "Country Slot 3": 0, "Country Slot 4": 0,
-    "Country Slot 5": 0, "Country Slot 6": 0, "Country Slot 7": 0, "Country Slot 8": 0,
-    "Country Slot 9": 0, "Country Slot 10": 0,
+    "Country Slot 5": 0, "Country Slot 6": 0,
 }
 
 user_sessions = {}
@@ -235,3 +233,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
