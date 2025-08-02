@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.INFO)
 
 CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
 SMSBOWER_API_KEY = os.getenv("SMSBOWER_API_KEY")
+SMS24_API_KEY = os.getenv("SMS24_API_KEY")
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 COUNTRIES_SMSBOWER = {
@@ -24,16 +25,19 @@ COUNTRIES_SMSBOWER = {
     "Czech Republic": 10,
     "Paraguay": 23,
     "Hong Kong": 14,
-    "Country Slot 1": 0,
-    "Country Slot 2": 0,
-    "Country Slot 3": 0,
-    "Country Slot 4": 0,
-    "Country Slot 5": 0,
-    "Country Slot 6": 0,
-    "Country Slot 7": 0,
-    "Country Slot 8": 0,
-    "Country Slot 9": 0,
-    "Country Slot 10": 0,
+}
+
+COUNTRIES_24SMS7 = {
+    "Iran": 57,
+    "Russia": 0,
+    "Ukraine": 1,
+    "Mexico": 54,
+    "Italy": 86,
+    "Spain": 56,
+    "Czech Republic": 63,
+    "Kazakhstan": 2,
+    "Paraguay": 87,
+    "Hong Kong": 14,
 }
 
 CHOOSING, CANCELLED = range(2)
@@ -80,10 +84,64 @@ async def check_valid(numbers):
         return {num: False for num in numbers_str.split(",")}
 
 
+async def get_phone_number_smsbower(country_code):
+    url = (
+        f"https://smsbower.online/stubs/handler_api.php?"
+        f"api_key={SMSBOWER_API_KEY}&action=getNumber&service=tg&country={country_code}&maxPrice=58.67"
+    )
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    return None
+                text = await resp.text()
+                if text.startswith("ACCESS_NUMBER:"):
+                    number = text.split(":")[1].strip()
+                    return number
+                else:
+                    return None
+    except Exception as e:
+        logging.error(f"Error getting phone number from SMSBOWER: {e}")
+        return None
+
+
+async def get_phone_number_24sms7(country_code):
+    url = (
+        f"https://24sms7.com/stubs/handler_api.php?"
+        f"api_key={SMS24_API_KEY}&action=getNumber&service=tg&country={country_code}&maxPrice=58.67"
+    )
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    return None
+                text = await resp.text()
+                if text.startswith("ACCESS_NUMBER:"):
+                    number = text.split(":")[1].strip()
+                    return number
+                else:
+                    return None
+    except Exception as e:
+        logging.error(f"Error getting phone number from 24SMS7: {e}")
+        return None
+
+
+async def get_phone_number(country_code):
+    # اگر کشور تو 24sms7 بود، ازش بگیر، وگرنه از smsbower
+    if country_code in COUNTRIES_24SMS7.values():
+        number = await get_phone_number_24sms7(country_code)
+        if number:
+            return number
+
+    # fallback به smsbower
+    return await get_phone_number_smsbower(country_code)
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton(country, callback_data=str(code))]
-        for country, code in COUNTRIES_SMSBOWER.items() if code != 0
+        for country, code in {**COUNTRIES_SMSBOWER, **COUNTRIES_24SMS7}.items()
+        if code != 0
     ]
     keyboard.append([InlineKeyboardButton("لغو جستجو", callback_data="cancel")])
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -129,34 +187,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return CHOOSING
 
 
-async def get_phone_number(country_code):
-    url = (
-        f"https://smsbower.online/stubs/handler_api.php?"
-        f"api_key={SMSBOWER_API_KEY}&action=getNumber&service=tg&country={country_code}&maxPrice=58.67"
-    )
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    return None
-                text = await resp.text()
-                if text.startswith("ACCESS_NUMBER:"):
-                    number = text.split(":")[1].strip()
-                    return number
-                else:
-                    return None
-    except Exception as e:
-        logging.error(f"Error getting phone number: {e}")
-        return None
-
-
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("جستجو لغو شد.")
     return CANCELLED
 
 
 def main():
-    if not CHECKER_API_KEY or not SMSBOWER_API_KEY or not TELEGRAM_BOT_TOKEN:
+    if not CHECKER_API_KEY or not SMSBOWER_API_KEY or not SMS24_API_KEY or not TELEGRAM_BOT_TOKEN:
         logging.error("Environment variables for API keys or bot token are missing!")
         return
 
