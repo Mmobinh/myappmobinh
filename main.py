@@ -19,7 +19,6 @@ CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
 SERVICE = "tg"
 
 # === لیست کشورها ===
-# 📍 لیست کشورهای 24sms7 (با کشورهای اضافه شده + 10 جایگاه اضافی)
 COUNTRIES_24SMS7 = {
     "Iran": 57,
     "Russia": 0,
@@ -105,16 +104,28 @@ async def cancel_number(site, id_):
     async with aiohttp.ClientSession() as s:
         await s.get(url)
 
-# === بررسی اعتبار شماره ===
+# === بررسی اعتبار شماره (اصلاح شده با لاگ و تشخیص درست) ===
 async def check_valid(number):
     url = "http://checker.irbots.com:2021/check"
     params = {"key": CHECKER_API_KEY, "numbers": number}
-    async with aiohttp.ClientSession() as s:
-        async with s.get(url, params=params) as r:
-            if r.status == 200:
-                data = await r.json()
-                return data.get("data", {}).get(number, False)
-    return False
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url, params=params) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    logging.info(f"Checker response for {number}: {data}")
+                    valid = data.get("data", {}).get(number, False)
+                    if valid is True:
+                        return True
+                    else:
+                        logging.info(f"Number {number} is invalid according to checker.")
+                        return False
+                else:
+                    logging.error(f"Checker API returned status {resp.status}")
+                    return False
+        except Exception as e:
+            logging.error(f"Exception during check_valid: {e}")
+            return False
 
 # === فرمان‌ها ===
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -236,10 +247,9 @@ async def main():
     app.add_handler(CallbackQueryHandler(cancel_number_callback, pattern="^cancel_number$"))
     app.add_handler(CallbackQueryHandler(check_code_callback, pattern="^checkcode$"))
 
-    print("✅ Bot is running...")
+    logging.info("✅ Bot is running...")
     await app.run_polling()
 
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
