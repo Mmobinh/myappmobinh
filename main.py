@@ -143,7 +143,7 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
     else:  
         await query.edit_message_text("❌ شماره‌ای برای لغو نیست.")  
   
-# ✅ فقط این تابع اصلاح شده (همونی که دادی)
+# ✅ فقط همین تابع تغییر کرده: نمایش کد بدون بررسی ساختار
 async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):  
     query = update.callback_query  
     user_id = query.from_user.id  
@@ -156,10 +156,7 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         parts = resp.split(":")  
         if len(parts) >= 3:  
             code = parts[2].strip()  
-            if re.fullmatch(r"\d{5,6}", code):  
-                await query.answer(f"📩 کد: {code}", show_alert=True)  
-            else:  
-                await query.answer("❌ کدی با ساختار معتبر پیدا نشد.", show_alert=True)  
+            await query.answer(f"📩 کد دریافتی:\n{code}", show_alert=True)  
         else:  
             await query.answer("❌ خطا در دریافت کد (ساختار نادرست).", show_alert=True)  
     elif resp == "STATUS_WAIT_CODE":  
