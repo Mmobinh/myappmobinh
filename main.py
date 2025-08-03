@@ -190,7 +190,7 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             return
         resp = await (get_number_24sms7(code) if site == "24sms7" else get_number_smsbower(code))
         if not resp.startswith("ACCESS_NUMBER"):
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.1)
             continue
         _, id_, number = resp.split(":")[:3]
         number = f"+{number}"
@@ -266,4 +266,5 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.create_task(main())
     loop.run_forever()
+
 
