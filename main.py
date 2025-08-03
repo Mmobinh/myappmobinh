@@ -3,6 +3,7 @@ import asyncio
 import logging  
 import nest_asyncio  
 import aiohttp  
+import re
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup  
 from telegram.constants import ParseMode  
 from telegram.ext import (  
@@ -10,7 +11,6 @@ from telegram.ext import (
 )  
 from aiohttp import web  
   
-# === تنظیمات اولیه ===  
 logging.basicConfig(level=logging.INFO)  
 BOT_TOKEN = os.getenv("BOT_TOKEN")  
 API_KEY_24SMS7 = os.getenv("API_KEY_24SMS7")  
@@ -18,7 +18,6 @@ API_KEY_SMSBOWER = os.getenv("API_KEY_SMSBOWER")
 CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")  
 SERVICE = "tg"  
   
-# === لیست کشورها ===  
 COUNTRIES_24SMS7 = {  
     "Iran": 57,  
     "Russia": 0,  
@@ -79,7 +78,6 @@ async def cancel_number(site, id_):
     async with aiohttp.ClientSession() as s:  
         await s.get(url)  
   
-# ✅ اصلاح‌شده برای نشان دادن شماره ناسالم  
 async def check_valid(number):  
     url = "http://checker.irbots.com:2021/check"  
     params = {  
@@ -145,6 +143,7 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
     else:  
         await query.edit_message_text("❌ شماره‌ای برای لغو نیست.")  
   
+# ✅ فقط این تابع اصلاح شده
 async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):  
     query = update.callback_query  
     user_id = query.from_user.id  
@@ -156,8 +155,11 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     if resp.startswith("STATUS_OK"):  
         parts = resp.split(":")  
         if len(parts) >= 3:  
-            code = parts[2]  
-            await query.answer(f"📩 کد: {code}", show_alert=True)  
+            code = parts[2].strip()  
+            if re.fullmatch(r"\d{5,6}", code):  
+                await query.answer(f"📩 کد: {code}", show_alert=True)  
+            else:  
+                await query.answer("❌ کدی با ساختار معتبر پیدا نشد.", show_alert=True)  
         else:  
             await query.answer("❌ خطا در دریافت کد (ساختار نادرست).", show_alert=True)  
     elif resp == "STATUS_WAIT_CODE":  
@@ -165,7 +167,6 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:  
         await query.answer("❌ خطا در دریافت کد.", show_alert=True)  
   
-# ✅ فقط این تابع تغییر کرده  
 async def search_number(user_id, chat_id, msg_id, code, site, context):  
     while True:  
         if user_id in cancel_flags:  
@@ -224,4 +225,4 @@ async def main():
   
 if __name__ == "__main__":  
     nest_asyncio.apply()  
-    asyncio.run(main())
+    asyncio.run(main())  
