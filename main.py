@@ -3,7 +3,6 @@ import asyncio
 import logging  
 import nest_asyncio  
 import aiohttp  
-import re
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup  
 from telegram.constants import ParseMode  
 from telegram.ext import (  
@@ -150,16 +149,31 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     if user_id not in user_sessions:  
         await query.answer("❌ شماره‌ای فعال نیست.", show_alert=True)  
         return  
-    id_, site = user_sessions[user_id]  
-    resp = await get_code(site, id_)  
-    if resp.startswith("STATUS_OK:"):  
-        code = resp[len("STATUS_OK:"):].strip()
-        await query.answer(f"📩 کد دریافتی:\n{code}", show_alert=True)  
-    elif resp == "STATUS_WAIT_CODE":  
-        await query.answer("⏳ هنوز کدی دریافت نشده.", show_alert=True)  
-    else:  
-        await query.answer("❌ خطا در دریافت کد.", show_alert=True)  
   
+    id_, site = user_sessions[user_id]  
+    await query.answer("⏳ در حال بررسی دریافت کد...")  
+  
+    for _ in range(30):  # تلاش تا حدود 1 دقیقه  
+        resp = await get_code(site, id_)  
+        if resp.startswith("STATUS_OK:"):  
+            code = resp[len("STATUS_OK:"):].strip()  
+            await query.edit_message_text(  
+                f"📩 کد دریافتی:\n<code>{code}</code>",  
+                parse_mode=ParseMode.HTML  
+            )  
+            return  
+        elif resp == "STATUS_WAIT_CODE":  
+            await asyncio.sleep(2)  
+        else:  
+            await query.edit_message_text(  
+                f"❌ خطا در دریافت کد:\n<code>{resp}</code>",  
+                parse_mode=ParseMode.HTML  
+            )  
+            return  
+  
+    await query.edit_message_text("❌ کدی دریافت نشد. لطفاً دوباره تلاش کنید.")  
+  
+# ✅ فقط sleep سریع‌تر شده (۱ ثانیه به جای ۲)
 async def search_number(user_id, chat_id, msg_id, code, site, context):  
     while True:  
         if user_id in cancel_flags:  
@@ -168,7 +182,7 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             return  
         resp = await (get_number_24sms7(code) if site == "24sms7" else get_number_smsbower(code))  
         if not resp.startswith("ACCESS_NUMBER"):  
-            await asyncio.sleep(2)  
+            await asyncio.sleep(1)  
             continue  
         _, id_, number = resp.split(":")[:3]  
         number = f"+{number}"  
@@ -191,7 +205,7 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML  
             )  
             await cancel_number(site, id_)  
-        await asyncio.sleep(2)  
+        await asyncio.sleep(1)  
   
 async def web_handler(request):  
     return web.Response(text="✅ Bot is Alive!")  
