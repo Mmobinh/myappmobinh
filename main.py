@@ -132,7 +132,7 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()  
     user_id = query.from_user.id  
     if user_id in user_sessions:  
-        id_, site = user_sessions.pop(user_id)  
+        id_, site, _ = user_sessions.pop(user_id)  
         await cancel_number(site, id_)  
         buttons = [  
             [InlineKeyboardButton("24sms7", callback_data="site_24sms7")],  
@@ -142,7 +142,7 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
     else:  
         await query.edit_message_text("❌ شماره‌ای برای لغو نیست.")  
   
-# ✅ فقط این بخش تغییر کرده:
+# اصلاح‌شده:  
 async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):  
     query = update.callback_query  
     user_id = query.from_user.id  
@@ -150,30 +150,25 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("❌ شماره‌ای فعال نیست.", show_alert=True)  
         return  
   
-    id_, site = user_sessions[user_id]  
+    id_, site, number = user_sessions[user_id]  
+  
     await query.answer("⏳ در حال بررسی دریافت کد...")  
   
-    for _ in range(30):  # تلاش تا حدود 1 دقیقه  
+    for _ in range(60):  # تلاش تا 60 ثانیه  
         resp = await get_code(site, id_)  
         if resp.startswith("STATUS_OK:"):  
             code = resp[len("STATUS_OK:"):].strip()  
             await query.edit_message_text(  
-                f"📩 کد دریافتی:\n<code>{code}</code>",  
+                f"📩 کد برای شماره <code>{number}</code> دریافت شد:\n<code>{code}</code>",  
                 parse_mode=ParseMode.HTML  
             )  
             return  
         elif resp == "STATUS_WAIT_CODE":  
-            await asyncio.sleep(2)  
+            await asyncio.sleep(1)  # هر 1 ثانیه چک کن  
         else:  
-            await query.edit_message_text(  
-                f"❌ خطا در دریافت کد:\n<code>{resp}</code>",  
-                parse_mode=ParseMode.HTML  
-            )  
+            await query.answer("❌ خطا در دریافت کد.", show_alert=True)  
             return  
   
-    await query.edit_message_text("❌ کدی دریافت نشد. لطفاً دوباره تلاش کنید.")  
-  
-# ✅ فقط sleep سریع‌تر شده (۱ ثانیه به جای ۲)
 async def search_number(user_id, chat_id, msg_id, code, site, context):  
     while True:  
         if user_id in cancel_flags:  
@@ -182,13 +177,13 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             return  
         resp = await (get_number_24sms7(code) if site == "24sms7" else get_number_smsbower(code))  
         if not resp.startswith("ACCESS_NUMBER"):  
-            await asyncio.sleep(1)  
+            await asyncio.sleep(0.5)  # سرعت دو برابر (0.5 ثانیه)  
             continue  
         _, id_, number = resp.split(":")[:3]  
         number = f"+{number}"  
         valid = await check_valid(number)  
         if valid:  
-            user_sessions[user_id] = (id_, site)  
+            user_sessions[user_id] = (id_, site, number)  # اینجا شماره رو هم ذخیره می‌کنیم  
             buttons = [  
                 [InlineKeyboardButton("📩 دریافت کد", callback_data="checkcode")],  
                 [InlineKeyboardButton("❌ لغو شماره", callback_data="cancel_number")]  
@@ -205,7 +200,7 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML  
             )  
             await cancel_number(site, id_)  
-        await asyncio.sleep(1)  
+        await asyncio.sleep(0.5)  # سرعت دو برابر  
   
 async def web_handler(request):  
     return web.Response(text="✅ Bot is Alive!")  
