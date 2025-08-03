@@ -143,7 +143,7 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
     else:  
         await query.edit_message_text("❌ شماره‌ای برای لغو نیست.")  
   
-# ✅ فقط این تابع اصلاح شده
+# ✅ فقط این تابع اصلاح شده (همونی که دادی)
 async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):  
     query = update.callback_query  
     user_id = query.from_user.id  
@@ -225,4 +225,4 @@ async def main():
   
 if __name__ == "__main__":  
     nest_asyncio.apply()  
-    asyncio.run(main())  
+    asyncio.run(main())
