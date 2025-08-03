@@ -226,7 +226,7 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
 
 async def auto_check_code(user_id, chat_id, msg_id, id_, site, number, context):
     while user_id in user_sessions and user_sessions[user_id][0] == id_:
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         resp = await get_code(site, id_)
         if resp.startswith("STATUS_OK:"):
             code = resp[len("STATUS_OK:"):].strip()
@@ -266,3 +266,4 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.create_task(main())
     loop.run_forever()
+
