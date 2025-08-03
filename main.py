@@ -167,6 +167,22 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.answer("❌ خطا در دریافت کد.", show_alert=True)
 
 async def search_number(user_id, chat_id, msg_id, code, site, context):
+    async def delayed_cancel(id_, site_):
+        await asyncio.sleep(122)  # 2 دقیقه و 2 ثانیه
+        # اگر شماره هنوز لغو نشده و کاربر با اون شماره نیست
+        # یعنی اگر id_ و site_ هنوز در user_sessions نیستند
+        # یا لغو نشده‌اند
+        # در اینجا ما بررسی میکنیم که شماره لغو نشده باشد
+        # چون ممکنه کاربر شماره سالم گرفته باشه و session داشته باشه
+        # پس فقط شماره هایی که غیر سالم و بلااستفاده موندن لغو میشن
+        # چون این تابع برای شماره ناسالم فراخوانی میشه
+        # اینجا میتونیم از یک مکانیزم ساده استفاده کنیم:
+        # اگر id_ در session کاربر نیست یا session کاربر تغییر کرده
+        # پس لغوش کن
+        active_sessions_ids = [v[0] for v in user_sessions.values()]
+        if id_ not in active_sessions_ids:
+            await cancel_number(site_, id_)
+
     while True:
         if user_id in cancel_flags:
             cancel_flags.remove(user_id)
@@ -194,6 +210,8 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             asyncio.create_task(auto_check_code(user_id, chat_id, msg_id, id_, site, number, context))
             return
         else:
+            # شماره ناسالم: پس لغو فوری حذف نمیشه
+            # بلکه لغو با تاخیر انجام میشه
             await context.bot.edit_message_text(
                 f"❌ شماره ناسالم: <code>{number}</code>\n🔄 در حال جستجو برای شماره سالم...",
                 chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML,
@@ -202,7 +220,8 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                     [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
                 ])
             )
-            await cancel_number(site, id_)
+            # اجرای لغو با تاخیر در پس زمینه
+            asyncio.create_task(delayed_cancel(id_, site))
         await asyncio.sleep(1)
 
 async def auto_check_code(user_id, chat_id, msg_id, id_, site, number, context):
