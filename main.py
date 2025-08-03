@@ -79,7 +79,7 @@ async def cancel_number(site, id_):
     async with aiohttp.ClientSession() as s:  
         await s.get(url)  
   
-# ✅ اصلاح‌شده طبق مستندات checker.irbots  
+# ✅ اصلاح‌شده برای نشان دادن شماره ناسالم  
 async def check_valid(number):  
     url = "http://checker.irbots.com:2021/check"  
     params = {  
@@ -165,6 +165,7 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:  
         await query.answer("❌ خطا در دریافت کد.", show_alert=True)  
   
+# ✅ فقط این تابع تغییر کرده  
 async def search_number(user_id, chat_id, msg_id, code, site, context):  
     while True:  
         if user_id in cancel_flags:  
@@ -191,6 +192,10 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             )  
             return  
         else:  
+            await context.bot.edit_message_text(  
+                f"❌ شماره ناسالم: <code>{number}</code>\n🔄 در حال جستجو برای شماره سالم...",  
+                chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML  
+            )  
             await cancel_number(site, id_)  
         await asyncio.sleep(2)  
   
