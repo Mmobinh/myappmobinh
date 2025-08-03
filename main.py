@@ -46,12 +46,10 @@ COUNTRIES_SMSBOWER = {
     "Country Slot 5": 0,  
 }  
   
-# === متغیرهای حافظه موقت ===  
 user_sessions = {}  
 search_tasks = {}  
 cancel_flags = set()  
   
-# === دریافت شماره ===  
 async def get_number_24sms7(code):  
     url = f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getNumber&service={SERVICE}&country={code}"  
     async with aiohttp.ClientSession() as s:  
@@ -64,7 +62,6 @@ async def get_number_smsbower(code):
         async with s.get(url) as r:  
             return await r.text()  
   
-# === دریافت و لغو کد ===  
 async def get_code(site, id_):  
     url = {  
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getStatus&id={id_}",  
@@ -82,18 +79,23 @@ async def cancel_number(site, id_):
     async with aiohttp.ClientSession() as s:  
         await s.get(url)  
   
-# === بررسی اعتبار شماره ===  
+# ✅ اصلاح‌شده طبق مستندات checker.irbots  
 async def check_valid(number):  
     url = "http://checker.irbots.com:2021/check"  
-    params = {"key": CHECKER_API_KEY, "numbers": number}  
+    params = {  
+        "key": CHECKER_API_KEY,  
+        "numbers": number.strip("+")  
+    }  
     async with aiohttp.ClientSession() as s:  
         async with s.get(url, params=params) as r:  
             if r.status == 200:  
                 data = await r.json()  
-                return data.get("data", {}).get(number, False)  
+                status = data.get("status")  
+                if status == "ok":  
+                    result = data.get("data", {}).get(f"+{number.strip('+')}", False)  
+                    return result is True  
     return False  
   
-# === فرمان‌ها ===  
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):  
     buttons = [  
         [InlineKeyboardButton("24sms7", callback_data="site_24sms7")],  
@@ -153,14 +155,16 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     resp = await get_code(site, id_)  
     if resp.startswith("STATUS_OK"):  
         parts = resp.split(":")  
-        code = parts[2] if len(parts) > 2 else "❓"  
-        await query.answer(f"📩 کد: {code}", show_alert=True)  
+        if len(parts) >= 3:  
+            code = parts[2]  
+            await query.answer(f"📩 کد: {code}", show_alert=True)  
+        else:  
+            await query.answer("❌ خطا در دریافت کد (ساختار نادرست).", show_alert=True)  
     elif resp == "STATUS_WAIT_CODE":  
         await query.answer("⏳ هنوز کدی دریافت نشده.", show_alert=True)  
     else:  
         await query.answer("❌ خطا در دریافت کد.", show_alert=True)  
   
-# === جستجوی شماره ===  
 async def search_number(user_id, chat_id, msg_id, code, site, context):  
     while True:  
         if user_id in cancel_flags:  
@@ -187,14 +191,9 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             )  
             return  
         else:  
-            await context.bot.edit_message_text(  
-                f"❌ شماره خراب: <code>{number}</code>\n🔁 تلاش مجدد برای شماره جدید...",  
-                chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML  
-            )  
             await cancel_number(site, id_)  
-            await asyncio.sleep(1.5)  
+        await asyncio.sleep(2)  
   
-# === سرور وب برای زنده نگه‌داشتن ===  
 async def web_handler(request):  
     return web.Response(text="✅ Bot is Alive!")  
   
@@ -206,10 +205,8 @@ async def start_webserver():
     site = web.TCPSite(runner, "0.0.0.0", 8080)  
     await site.start()  
   
-# === main ===  
 async def main():  
     await start_webserver()  
-  
     app = ApplicationBuilder().token(BOT_TOKEN).build()  
     app.add_handler(CommandHandler("start", start))  
     app.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))  
@@ -217,10 +214,9 @@ async def main():
     app.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))  
     app.add_handler(CallbackQueryHandler(cancel_number_callback, pattern="^cancel_number$"))  
     app.add_handler(CallbackQueryHandler(check_code_callback, pattern="^checkcode$"))  
-  
     print("✅ Bot is running...")  
     await app.run_polling()  
   
 if __name__ == "__main__":  
     nest_asyncio.apply()  
-    asyncio.run(main())  
+    asyncio.run(main())
