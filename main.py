@@ -56,7 +56,7 @@ async def get_number_24sms7(code):
             return await r.text()  
   
 async def get_number_smsbower(code):  
-    url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=58.67&providerIds=2195,2194,1000,2196&exceptProviderIds=&phoneException=7700,7708"  
+    url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=58.67&providerIds=2195,2194,1000&exceptProviderIds=2196&phoneException=7700,7708"  
     async with aiohttp.ClientSession() as s:  
         async with s.get(url) as r:  
             return await r.text()  
@@ -143,7 +143,7 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
     else:  
         await query.edit_message_text("❌ شماره‌ای برای لغو نیست.")  
   
-# ✅ فقط همین تابع تغییر کرده: نمایش کد بدون بررسی ساختار
+# ✅ فقط این بخش تغییر کرده:
 async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):  
     query = update.callback_query  
     user_id = query.from_user.id  
@@ -152,13 +152,9 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         return  
     id_, site = user_sessions[user_id]  
     resp = await get_code(site, id_)  
-    if resp.startswith("STATUS_OK"):  
-        parts = resp.split(":")  
-        if len(parts) >= 3:  
-            code = parts[2].strip()  
-            await query.answer(f"📩 کد دریافتی:\n{code}", show_alert=True)  
-        else:  
-            await query.answer("❌ خطا در دریافت کد (ساختار نادرست).", show_alert=True)  
+    if resp.startswith("STATUS_OK:"):  
+        code = resp[len("STATUS_OK:"):].strip()
+        await query.answer(f"📩 کد دریافتی:\n{code}", show_alert=True)  
     elif resp == "STATUS_WAIT_CODE":  
         await query.answer("⏳ هنوز کدی دریافت نشده.", show_alert=True)  
     else:  
@@ -223,4 +219,3 @@ async def main():
 if __name__ == "__main__":  
     nest_asyncio.apply()  
     asyncio.run(main())
-
