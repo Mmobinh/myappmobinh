@@ -48,6 +48,9 @@ user_sessions = {}
 search_tasks = {}
 cancel_flags = set()
 
+# اضافه کردم این دیکشنری برای نگهداری حداکثر 5 شماره سالم هر کاربر
+user_numbers = {}
+
 async def get_number_24sms7(code):
     url = f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getNumber&service={SERVICE}&country={code}"
     async with aiohttp.ClientSession() as s:
@@ -126,6 +129,7 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     _, site, code = query.data.split("_")
     user_id = query.from_user.id
     cancel_flags.discard(user_id)
+    user_numbers[user_id] = []  # ریست لیست شماره‌های سالم کاربر
     msg = await query.edit_message_text("⏳ جستجو برای شماره سالم...", reply_markup=InlineKeyboardMarkup([
         [InlineKeyboardButton("❌ کنسل جستجو", callback_data="cancel_search")],
         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
@@ -143,6 +147,7 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
+    # حذف شماره و لغو آن
     if user_id in user_sessions:
         id_, site = user_sessions.pop(user_id)
         await cancel_number(site, id_)
@@ -153,6 +158,7 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
 async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
+    # در حالت چند شماره ای، بررسی می کنیم شماره فعال آخر رو
     if user_id not in user_sessions:
         await query.answer("❌ شماره‌ای فعال نیست.", show_alert=True)
         return
@@ -169,18 +175,8 @@ async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
 async def search_number(user_id, chat_id, msg_id, code, site, context):
     async def delayed_cancel(id_, site_):
         await asyncio.sleep(122)  # 2 دقیقه و 2 ثانیه
-        # اگر شماره هنوز لغو نشده و کاربر با اون شماره نیست
-        # یعنی اگر id_ و site_ هنوز در user_sessions نیستند
-        # یا لغو نشده‌اند
-        # در اینجا ما بررسی میکنیم که شماره لغو نشده باشد
-        # چون ممکنه کاربر شماره سالم گرفته باشه و session داشته باشه
-        # پس فقط شماره هایی که غیر سالم و بلااستفاده موندن لغو میشن
-        # چون این تابع برای شماره ناسالم فراخوانی میشه
-        # اینجا میتونیم از یک مکانیزم ساده استفاده کنیم:
-        # اگر id_ در session کاربر نیست یا session کاربر تغییر کرده
-        # پس لغوش کن
-        active_sessions_ids = [v[0] for v in user_sessions.values()]
-        if id_ not in active_sessions_ids:
+        active_ids = [v[0] for v in user_sessions.values()]
+        if id_ not in active_ids:
             await cancel_number(site_, id_)
 
     while True:
@@ -188,14 +184,22 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             cancel_flags.remove(user_id)
             await context.bot.edit_message_text("🚫 جستجو لغو شد.", chat_id=chat_id, message_id=msg_id)
             return
+
+        if len(user_numbers.get(user_id, [])) >= 5:
+            await context.bot.edit_message_text("✅ ۵ شماره سالم پیدا شد. جستجو متوقف شد.", chat_id=chat_id, message_id=msg_id)
+            return
+
         resp = await (get_number_24sms7(code) if site == "24sms7" else get_number_smsbower(code))
         if not resp.startswith("ACCESS_NUMBER"):
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(1)
             continue
         _, id_, number = resp.split(":")[:3]
         number = f"+{number}"
         valid = await check_valid(number)
         if valid:
+            # ذخیره شماره و آی‌دی برای کاربر، به جای یک عدد، لیست ۵ تایی
+            user_numbers.setdefault(user_id, []).append((id_, site, number))
+            # انتخاب شماره جدید به عنوان شماره فعال (آخرین)
             user_sessions[user_id] = (id_, site)
             buttons = [
                 [InlineKeyboardButton("📩 دریافت کد", callback_data="checkcode")],
@@ -203,15 +207,15 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
             ]
             await context.bot.edit_message_text(
-                f"📱 شماره سالم: <code>{number}</code>", chat_id=chat_id,
-                message_id=msg_id, parse_mode=ParseMode.HTML,
+                f"📱 شماره سالم پیدا شد: <code>{number}</code>\n(شماره‌های سالم فعلی: {len(user_numbers[user_id])})",
+                chat_id=chat_id,
+                message_id=msg_id,
+                parse_mode=ParseMode.HTML,
                 reply_markup=InlineKeyboardMarkup(buttons)
             )
+            # اجرای همزمان دریافت کد خودکار برای این شماره
             asyncio.create_task(auto_check_code(user_id, chat_id, msg_id, id_, site, number, context))
-            return
         else:
-            # شماره ناسالم: پس لغو فوری حذف نمیشه
-            # بلکه لغو با تاخیر انجام میشه
             await context.bot.edit_message_text(
                 f"❌ شماره ناسالم: <code>{number}</code>\n🔄 در حال جستجو برای شماره سالم...",
                 chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML,
@@ -220,13 +224,12 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                     [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
                 ])
             )
-            # اجرای لغو با تاخیر در پس زمینه
             asyncio.create_task(delayed_cancel(id_, site))
         await asyncio.sleep(1)
 
 async def auto_check_code(user_id, chat_id, msg_id, id_, site, number, context):
     while user_id in user_sessions and user_sessions[user_id][0] == id_:
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(1)
         resp = await get_code(site, id_)
         if resp.startswith("STATUS_OK:"):
             code = resp[len("STATUS_OK:"):].strip()
@@ -234,6 +237,9 @@ async def auto_check_code(user_id, chat_id, msg_id, id_, site, number, context):
                 f"📩 کد برای شماره <code>{number}</code> دریافت شد:\n<code>{code}</code>",
                 chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML
             )
+            # وقتی کد دریافت شد، شماره رو از جلسات کاربر حذف می‌کنیم تا شماره بعدی به عنوان فعال بیاد
+            if user_id in user_sessions and user_sessions[user_id][0] == id_:
+                user_sessions.pop(user_id)
             return
 
 async def web_handler(request):
@@ -266,5 +272,3 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.create_task(main())
     loop.run_forever()
-
-
