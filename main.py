@@ -10,6 +10,7 @@ from telegram.ext import (
 )  
 from aiohttp import web  
   
+# === تنظیمات اولیه ===  
 logging.basicConfig(level=logging.INFO)  
 BOT_TOKEN = os.getenv("BOT_TOKEN")  
 API_KEY_24SMS7 = os.getenv("API_KEY_24SMS7")  
@@ -17,6 +18,7 @@ API_KEY_SMSBOWER = os.getenv("API_KEY_SMSBOWER")
 CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")  
 SERVICE = "tg"  
   
+# === لیست کشورها ===  
 COUNTRIES_24SMS7 = {  
     "Iran": 57,  
     "Russia": 0,  
@@ -35,6 +37,7 @@ COUNTRIES_24SMS7 = {
     "Country Slot 5": 0,  
 }  
   
+# 📍 لیست کشورهای smsbower  
 COUNTRIES_SMSBOWER = {  
     "Kazakhstan": 2,  
     "Country Slot 1": 0,  
@@ -44,10 +47,12 @@ COUNTRIES_SMSBOWER = {
     "Country Slot 5": 0,  
 }  
   
+# === متغیرهای حافظه موقت ===  
 user_sessions = {}  
 search_tasks = {}  
 cancel_flags = set()  
   
+# === دریافت شماره ===  
 async def get_number_24sms7(code):  
     url = f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getNumber&service={SERVICE}&country={code}"  
     async with aiohttp.ClientSession() as s:  
@@ -60,6 +65,7 @@ async def get_number_smsbower(code):
         async with s.get(url) as r:  
             return await r.text()  
   
+# === دریافت و لغو کد ===  
 async def get_code(site, id_):  
     url = {  
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getStatus&id={id_}",  
@@ -77,23 +83,18 @@ async def cancel_number(site, id_):
     async with aiohttp.ClientSession() as s:  
         await s.get(url)  
   
-# ✅ چکر اصلاح‌شده بر اساس API checker.irbots.com  
+# === بررسی اعتبار شماره ===  
 async def check_valid(number):  
     url = "http://checker.irbots.com:2021/check"  
-    params = {  
-        "key": CHECKER_API_KEY,  
-        "numbers": number  
-    }  
-    async with aiohttp.ClientSession() as session:  
-        async with session.get(url, params=params) as response:  
-            if response.status == 200:  
-                result = await response.json()  
-                if result.get("status") == "ok":  
-                    data = result.get("data", {})  
-                    check_result = data.get(number)  
-                    return check_result is True  
+    params = {"key": CHECKER_API_KEY, "numbers": number}  
+    async with aiohttp.ClientSession() as s:  
+        async with s.get(url, params=params) as r:  
+            if r.status == 200:  
+                data = await r.json()  
+                return data.get("data", {}).get(number, False)  
     return False  
   
+# === فرمان‌ها ===  
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):  
     buttons = [  
         [InlineKeyboardButton("24sms7", callback_data="site_24sms7")],  
@@ -143,22 +144,30 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
     else:  
         await query.edit_message_text("❌ شماره‌ای برای لغو نیست.")  
   
-async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):  
-    query = update.callback_query  
-    user_id = query.from_user.id  
-    if user_id not in user_sessions:  
-        await query.answer("❌ شماره‌ای فعال نیست.", show_alert=True)  
-        return  
-    id_, site = user_sessions[user_id]  
-    resp = await get_code(site, id_)  
-    if resp.startswith("STATUS_OK"):  
-        code = resp.split(":")[2]  
-        await query.answer(f"📩 کد: {code}", show_alert=True)  
-    elif resp == "STATUS_WAIT_CODE":  
-        await query.answer("⏳ هنوز کدی دریافت نشده.", show_alert=True)  
-    else:  
-        await query.answer("❌ خطا در دریافت کد.", show_alert=True)  
+async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = query.from_user.id
+
+    if user_id not in user_sessions:
+        await query.answer("❌ شماره‌ای فعال نیست.", show_alert=True)
+        return
+
+    id_, site = user_sessions[user_id]
+    resp = await get_code(site, id_)
+
+    if resp.startswith("STATUS_OK"):
+        parts = resp.split(":")
+        if len(parts) >= 3:
+            code = parts[2]
+            await query.answer(f"📩 کد: {code}", show_alert=True)
+        else:
+            await query.answer("❌ فرمت پاسخ غیرمنتظره بود.", show_alert=True)
+    elif resp == "STATUS_WAIT_CODE":
+        await query.answer("⏳ هنوز کدی دریافت نشده.", show_alert=True)
+    else:
+        await query.answer("❌ خطا در دریافت کد.", show_alert=True)
   
+# === جستجوی شماره ===  
 async def search_number(user_id, chat_id, msg_id, code, site, context):  
     while True:  
         if user_id in cancel_flags:  
@@ -184,35 +193,4 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 reply_markup=InlineKeyboardMarkup(buttons)  
             )  
             return  
-        else:  
-            await cancel_number(site, id_)  
-        await asyncio.sleep(2)  
-  
-async def web_handler(request):  
-    return web.Response(text="✅ Bot is Alive!")  
-  
-async def start_webserver():  
-    app = web.Application()  
-    app.add_routes([web.get('/', web_handler)])  
-    runner = web.AppRunner(app)  
-    await runner.setup()  
-    site = web.TCPSite(runner, "0.0.0.0", 8080)  
-    await site.start()  
-  
-async def main():  
-    await start_webserver()  
-  
-    app = ApplicationBuilder().token(BOT_TOKEN).build()  
-    app.add_handler(CommandHandler("start", start))  
-    app.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))  
-    app.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))  
-    app.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))  
-    app.add_handler(CallbackQueryHandler(cancel_number_callback, pattern="^cancel_number$"))  
-    app.add_handler(CallbackQueryHandler(check_code_callback, pattern="^checkcode$"))  
-  
-    print("✅ Bot is running...")  
-    await app.run_polling()  
-  
-if __name__ == "__main__":  
-    nest_asyncio.apply()  
-    asyncio.run(main())  
+        else:
