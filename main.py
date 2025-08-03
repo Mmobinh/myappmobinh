@@ -37,7 +37,6 @@ COUNTRIES_24SMS7 = {
     "Country Slot 5": 0,  
 }  
   
-# 📍 لیست کشورهای smsbower  
 COUNTRIES_SMSBOWER = {  
     "Kazakhstan": 2,  
     "Country Slot 1": 0,  
@@ -144,28 +143,22 @@ async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_T
     else:  
         await query.edit_message_text("❌ شماره‌ای برای لغو نیست.")  
   
-async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = query.from_user.id
-
-    if user_id not in user_sessions:
-        await query.answer("❌ شماره‌ای فعال نیست.", show_alert=True)
-        return
-
-    id_, site = user_sessions[user_id]
-    resp = await get_code(site, id_)
-
-    if resp.startswith("STATUS_OK"):
-        parts = resp.split(":")
-        if len(parts) >= 3:
-            code = parts[2]
-            await query.answer(f"📩 کد: {code}", show_alert=True)
-        else:
-            await query.answer("❌ فرمت پاسخ غیرمنتظره بود.", show_alert=True)
-    elif resp == "STATUS_WAIT_CODE":
-        await query.answer("⏳ هنوز کدی دریافت نشده.", show_alert=True)
-    else:
-        await query.answer("❌ خطا در دریافت کد.", show_alert=True)
+async def check_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):  
+    query = update.callback_query  
+    user_id = query.from_user.id  
+    if user_id not in user_sessions:  
+        await query.answer("❌ شماره‌ای فعال نیست.", show_alert=True)  
+        return  
+    id_, site = user_sessions[user_id]  
+    resp = await get_code(site, id_)  
+    if resp.startswith("STATUS_OK"):  
+        parts = resp.split(":")  
+        code = parts[2] if len(parts) > 2 else "❓"  
+        await query.answer(f"📩 کد: {code}", show_alert=True)  
+    elif resp == "STATUS_WAIT_CODE":  
+        await query.answer("⏳ هنوز کدی دریافت نشده.", show_alert=True)  
+    else:  
+        await query.answer("❌ خطا در دریافت کد.", show_alert=True)  
   
 # === جستجوی شماره ===  
 async def search_number(user_id, chat_id, msg_id, code, site, context):  
@@ -193,4 +186,41 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 reply_markup=InlineKeyboardMarkup(buttons)  
             )  
             return  
-        else:
+        else:  
+            await context.bot.edit_message_text(  
+                f"❌ شماره خراب: <code>{number}</code>\n🔁 تلاش مجدد برای شماره جدید...",  
+                chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML  
+            )  
+            await cancel_number(site, id_)  
+            await asyncio.sleep(1.5)  
+  
+# === سرور وب برای زنده نگه‌داشتن ===  
+async def web_handler(request):  
+    return web.Response(text="✅ Bot is Alive!")  
+  
+async def start_webserver():  
+    app = web.Application()  
+    app.add_routes([web.get('/', web_handler)])  
+    runner = web.AppRunner(app)  
+    await runner.setup()  
+    site = web.TCPSite(runner, "0.0.0.0", 8080)  
+    await site.start()  
+  
+# === main ===  
+async def main():  
+    await start_webserver()  
+  
+    app = ApplicationBuilder().token(BOT_TOKEN).build()  
+    app.add_handler(CommandHandler("start", start))  
+    app.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))  
+    app.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))  
+    app.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))  
+    app.add_handler(CallbackQueryHandler(cancel_number_callback, pattern="^cancel_number$"))  
+    app.add_handler(CallbackQueryHandler(check_code_callback, pattern="^checkcode$"))  
+  
+    print("✅ Bot is running...")  
+    await app.run_polling()  
+  
+if __name__ == "__main__":  
+    nest_asyncio.apply()  
+    asyncio.run(main())  
