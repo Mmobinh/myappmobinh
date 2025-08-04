@@ -44,7 +44,7 @@ COUNTRIES_SMSBOWER = {
     "Country Slot 5": 0,
 }
 
-# ✅ تعداد درخواست هم‌زمان برای هر سرویس
+# تعداد درخواست هم‌زمان برای هر سرویس
 MAX_PARALLEL_REQUESTS = {
     "24sms7": 1,
     "smsbower": 5
@@ -95,7 +95,7 @@ async def check_valid(number):
                 if status == "ok":
                     result = data.get("data", {}).get(f"+{number.strip('+')}", False)
                     return result is True
-    return False
+            return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [
@@ -133,11 +133,10 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
     ]))
 
-    # ✅ استفاده از مقدار قابل تنظیم
     max_requests = MAX_PARALLEL_REQUESTS.get(site, 1)
 
     async def run_parallel_search(i):
-        await search_number(user_id, query.message.chat_id, msg.message_id, code, site, context)
+        await search_number(user_id, query.message.chat_id, msg.message_id, int(code), site, context)
 
     tasks = [asyncio.create_task(run_parallel_search(i)) for i in range(max_requests)]
     search_tasks[user_id] = tasks[0]
@@ -190,7 +189,7 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 ])
             )
             asyncio.create_task(delayed_cancel(id_, site))
-        await asyncio.sleep(1)
+            await asyncio.sleep(1)
 
 async def auto_check_code(user_id, chat_id, msg_id, id_, site, number, context):
     while True:
