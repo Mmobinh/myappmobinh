@@ -29,22 +29,47 @@ COUNTRIES_24SMS7 = {
     "Kazakhstan": 2,
     "Paraguay": 87,
     "Hong Kong": 14,
+    "Country Slot 1": 0,
+    "Country Slot 2": 0,
+    "Country Slot 3": 0,
+    "Country Slot 4": 0,
+    "Country Slot 5": 0,
 }
 
 COUNTRIES_SMSBOWER = {
     "Kazakhstan": 2,
+    "Country Slot 1": 0,
+    "Country Slot 2": 0,
+    "Country Slot 3": 0,
+    "Country Slot 4": 0,
+    "Country Slot 5": 0,
+    "Country Slot 6": 0,
+    "Country Slot 7": 0,
+    "Country Slot 8": 0,
+    "Country Slot 9": 0,
+    "Country Slot 10": 0,
 }
 
 COUNTRIES_TIGER_SMS = {
     "Iran": 57,
     "Russia": 0,
     "Ukraine": 1,
+    "Country Slot 1": 0,
+    "Country Slot 2": 0,
+    "Country Slot 3": 0,
+    "Country Slot 4": 0,
+    "Country Slot 5": 0,
+    "Country Slot 6": 0,
+    "Country Slot 7": 0,
+    "Country Slot 8": 0,
+    "Country Slot 9": 0,
+    "Country Slot 10": 0,
 }
 
 MAX_PARALLEL_REQUESTS = {
     "24sms7": 1,
     "smsbower": 5,
-    "tiger": 3,
+    "tiger": 1,
 }
 
 user_sessions = {}
@@ -298,5 +323,6 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
 
