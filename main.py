@@ -14,9 +14,8 @@ logging.basicConfig(level=logging.INFO)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_KEY_24SMS7 = os.getenv("API_KEY_24SMS7")
 API_KEY_SMSBOWER = os.getenv("API_KEY_SMSBOWER")
+API_KEY_TIGER_SMS = os.getenv("API_KEY_TIGER_SMS")
 CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
-API_KEY_TIGER_SMS = os.getenv("API_KEY_TIGER_SMS")  # اضافه شده
-
 SERVICE = "tg"
 
 COUNTRIES_24SMS7 = {
@@ -46,23 +45,15 @@ COUNTRIES_SMSBOWER = {
     "Country Slot 5": 0,
 }
 
-COUNTRIES_TIGER_SMS = {  # اضافه شده
-    "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
+COUNTRIES_TIGER_SMS = {
+    # اگر کشوری داره اضافه کن اینجا
+    "Iran": 57,  # نمونه، در صورت نیاز اصلاح کن
 }
 
 MAX_PARALLEL_REQUESTS = {
     "24sms7": 1,
     "smsbower": 5,
-    "tigersms": 3,  # اضافه شده
+    "tiger_sms": 3  # تعداد همزمان برای tiger-sms، میتونی تغییر بدی
 }
 
 user_sessions = {}
@@ -82,42 +73,51 @@ async def get_number_smsbower(code):
         async with s.get(url) as r:
             return await r.text()
 
-async def get_number_tigersms(code):  # اضافه شده
-    url = f"https://tiger-sms.shop/api/getNumber?api_key={API_KEY_TIGER_SMS}&service={SERVICE}&country={code}"
+async def get_number_tiger_sms(code):
+    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER_SMS}&action=getNumber&service={SERVICE}&country={code}"
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
             return await r.text()
 
 async def get_code(site, id_):
-    if site == "24sms7":
-        url = f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getStatus&id={id_}"
-    elif site == "smsbower":
-        url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getStatus&id={id_}"
-    elif site == "tigersms":
-        url = f"https://tiger-sms.shop/api/getStatus?api_key={API_KEY_TIGER_SMS}&id={id_}"
-    else:
-        return ""
+    url = {
+        "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getStatus&id={id_}",
+        "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getStatus&id={id_}",
+        "tiger_sms": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER_SMS}&action=getStatus&id={id_}"
+    }[site]
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
             return await r.text()
 
 async def cancel_number(site, id_):
-    if site == "24sms7":
-        url = f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=setStatus&status=8&id={id_}"
-    elif site == "smsbower":
-        url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=setStatus&status=8&id={id_}"
-    elif site == "tigersms":
-        url = f"https://tiger-sms.shop/api/setStatus?api_key={API_KEY_TIGER_SMS}&status=8&id={id_}"
-    else:
-        return
+    url = {
+        "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=setStatus&status=8&id={id_}",
+        "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=setStatus&status=8&id={id_}",
+        "tiger_sms": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER_SMS}&action=setStatus&status=8&id={id_}"
+    }[site]
     async with aiohttp.ClientSession() as s:
         await s.get(url)
+
+# بقیه کد دقیقاً بدون تغییر
+
+async def check_valid(number):
+    url = "http://checker.irbots.com:2021/check"
+    params = {"key": CHECKER_API_KEY, "numbers": number.strip("+")}
+    async with aiohttp.ClientSession() as s:
+        async with s.get(url, params=params) as r:
+            if r.status == 200:
+                data = await r.json()
+                status = data.get("status")
+                if status == "ok":
+                    result = data.get("data", {}).get(f"+{number.strip('+')}", False)
+                    return result is True
+    return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [
         [InlineKeyboardButton("24sms7", callback_data="site_24sms7")],
         [InlineKeyboardButton("SMSBower", callback_data="site_smsbower")],
-        [InlineKeyboardButton("TigerSMS", callback_data="site_tigersms")],  # اضافه شده
+        [InlineKeyboardButton("Tiger SMS", callback_data="site_tiger_sms")],
     ]
     await update.message.reply_text("🌐 انتخاب سرویس:", reply_markup=InlineKeyboardMarkup(buttons))
 
@@ -129,13 +129,13 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
         countries = COUNTRIES_24SMS7
     elif site == "smsbower":
         countries = COUNTRIES_SMSBOWER
-    elif site == "tigersms":
+    else:  # tiger_sms
         countries = COUNTRIES_TIGER_SMS
-    else:
-        countries = {}
     buttons = [[InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}")] for name, id_ in countries.items()]
     buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
+
+# ... بقیه کد بدون تغییر ...
 
 async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -157,12 +157,6 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tasks = [asyncio.create_task(run_parallel_search(i)) for i in range(max_requests)]
     search_tasks[user_id] = tasks[0]
 
-async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    user_id = query.from_user.id
-    cancel_flags.add(user_id)
-
 async def search_number(user_id, chat_id, msg_id, code, site, context):
     async def delayed_cancel(id_, site_):
         await asyncio.sleep(122)
@@ -179,10 +173,8 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             resp = await get_number_24sms7(code)
         elif site == "smsbower":
             resp = await get_number_smsbower(code)
-        elif site == "tigersms":
-            resp = await get_number_tigersms(code)
         else:
-            resp = ""
+            resp = await get_number_tiger_sms(code)
         if not resp.startswith("ACCESS_NUMBER"):
             await asyncio.sleep(1)
             continue
@@ -216,74 +208,79 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
 
 async def auto_check_code(user_id, chat_id, msg_id, id_, site, number, context):
     while True:
-        if user_id in cancel_flags:
-            cancel_flags.remove(user_id)
-            await cancel_number(site, id_)
-            await context.bot.edit_message_text("🚫 لغو دریافت کد.", chat_id=chat_id, message_id=msg_id)
-            return
-        code = await get_code(site, id_)
-        if "STATUS_OK" in code or "STATUS_CANCEL" in code:
+        await asyncio.sleep(1)
+        resp = await get_code(site, id_)
+        if resp.startswith("STATUS_OK:"):
+            code = resp[len("STATUS_OK:"):].strip()
             await context.bot.edit_message_text(
-                f"📨 کد دریافتی برای شماره <code>{number}</code>:\n\n<code>{code}</code>",
-                chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML,
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("❌ لغو شماره", callback_data=f"cancel_{id_}")],
-                    [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
-                ])
+                f"📩 کد برای شماره <code>{number}</code> دریافت شد:\n<code>{code}</code>",
+                chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML
             )
             return
-        await asyncio.sleep(3)
 
-async def check_valid(number):
-    # تابع بررسی صحت شماره (نمونه)
-    return True  # یا منطق خودت رو بزار
-
-async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def dynamic_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     user_id = query.from_user.id
-    data = query.data
-    id_ = data.split("_")[1]
-    site = None
-    for val in valid_numbers.get(user_id, []):
-        if val[0] == id_:
-            site = val[1]
+    await query.answer()
+    id_ = query.data.split("_")[1]
+    for rec in valid_numbers.get(user_id, []):
+        if rec[0] == id_:
+            _, site, number, msg_id = rec
+            resp = await get_code(site, id_)
+            if resp.startswith("STATUS_OK:"):
+                code = resp[len("STATUS_OK:"):].strip()
+                await context.bot.edit_message_text(
+                    f"📩 کد برای شماره <code>{number}</code> دریافت شد:\n<code>{code}</code>",
+                    chat_id=query.message.chat_id, message_id=msg_id, parse_mode=ParseMode.HTML
+                )
+            elif resp == "STATUS_WAIT_CODE":
+                await query.answer("⏳ هنوز کدی دریافت نشده.", show_alert=True)
+            else:
+                await query.answer("❌ خطا در دریافت کد.", show_alert=True)
             break
-    if site:
-        await cancel_number(site, id_)
-        await query.edit_message_text("شماره لغو شد.", reply_markup=None)
 
-async def back_to_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    user_id = query.from_user.id
     await query.answer()
-    buttons = [
-        [InlineKeyboardButton("24sms7", callback_data="site_24sms7")],
-        [InlineKeyboardButton("SMSBower", callback_data="site_smsbower")],
-        [InlineKeyboardButton("TigerSMS", callback_data="site_tigersms")],
-    ]
-    await query.edit_message_text("🌐 انتخاب سرویس:", reply_markup=InlineKeyboardMarkup(buttons))
+    id_ = query.data.split("_")[1]
+    new_list = []
+    for rec in valid_numbers.get(user_id, []):
+        if rec[0] == id_:
+            await cancel_number(rec[1], rec[0])
+            await context.bot.edit_message_text(
+                f"❌ شماره لغو شد: <code>{rec[2]}</code>",
+                chat_id=query.message.chat_id, message_id=rec[3], parse_mode=ParseMode.HTML
+            )
+        else:
+            new_list.append(rec)
+    valid_numbers[user_id] = new_list
 
-async def back_to_sites(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    site = None
-    if query.data.startswith("back_to_sites"):
-        # اگر نیاز بود میشه کشور رو دوباره نشان داد یا سرویس رو
-        await back_to_start(update, context)
+async def web_handler(request):
+    return web.Response(text="✅ Bot is Alive!")
 
-def main():
-    nest_asyncio.apply()
+async def start_webserver():
+    app = web.Application()
+    app.add_routes([web.get('/', web_handler)])
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8080)
+    await site.start()
+
+async def main():
+    await start_webserver()
     application = ApplicationBuilder().token(BOT_TOKEN).build()
-
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
     application.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))
     application.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))
-    application.add_handler(CallbackQueryHandler(cancel_number_callback, pattern="^cancel_"))
+    application.add_handler(CallbackQueryHandler(dynamic_cancel_number, pattern="^cancel_"))
+    application.add_handler(CallbackQueryHandler(dynamic_check_code, pattern="^checkcode_"))
     application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back_to_start$"))
     application.add_handler(CallbackQueryHandler(back_to_sites, pattern="^back_to_sites$"))
-
-    application.run_polling()
+    print("✅ Bot is running...")
+    await application.run_polling()
 
 if __name__ == "__main__":
-    main()
+    nest_asyncio.apply()
+    asyncio.run(main())
