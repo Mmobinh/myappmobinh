@@ -62,7 +62,7 @@ async def get_number_24sms7(code):
             return await r.text()
 
 async def get_number_smsbower(code):
-    url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=58.67&providerIds=2195,2194,1000&exceptProviderIds=2196&phoneException=7700,7708"
+    url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=58.67&providerIds=2195,2194,1000,2196&exceptProviderIds=&phoneException=7700,7708"
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
             return await r.text()
@@ -270,4 +270,5 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
