@@ -66,7 +66,7 @@ async def get_number_smsbower(code):
 
 async def get_number_tiger(code):
     API_KEY_TIGER = os.getenv("API_KEY_TIGER")
-    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key=hXLNOBsjuvGcyctSlXtkgE3f03rC5yrd&action=getNumber&service=$service&country=$country&ref=$ref&maxPrice=&providerIds=85,188&exceptProviderIds="
+    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&actoin=getNumber&service={SERVICE}&country={code}&ref=$ref&maxPrice=&providerIds=85,188&exceptProviderIds="
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
             return await r.text()
@@ -75,7 +75,7 @@ async def get_code(site, id_):
     url = {
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getStatus&id={id_}",
         "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getStatus&id={id_}",
-        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={os.getenv('API_KEY_TIGER')}&action=getStatus&id={id_}",
+        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getStatus&id={id_}",
     }[site]
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
@@ -85,7 +85,7 @@ async def cancel_number(site, id_):
     url = {
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=setStatus&status=8&id={id_}",
         "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=setStatus&status=8&id={id_}",
-        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={os.getenv('API_KEY_TIGER')}&action=setStatus&status=8&id={id_}",
+        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=setStatus&status=8&id={id_}",
     }[site]
     async with aiohttp.ClientSession() as s:
         await s.get(url)
@@ -292,5 +292,6 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
 
