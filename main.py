@@ -66,7 +66,7 @@ async def get_number_smsbower(code):
 
 async def get_number_tiger(code):
     API_KEY_TIGER = os.getenv("API_KEY_TIGER")
-    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}&ref=$ref&maxPrice=&providerIds=&exceptProviderIds="
+    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&actoin=getNumber&service={SERVICE}&country={code}&ref=$ref&maxPrice=&providerIds=&exceptProviderIds="
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
             return await r.text()
@@ -171,11 +171,17 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
         if id_ not in active_ids:
             await cancel_number(site_, id_)
 
-    while len(valid_numbers[user_id]) < 5:
+    while True:
         if user_id in cancel_flags:
             cancel_flags.remove(user_id)
             await context.bot.edit_message_text("🚫 جستجو لغو شد.", chat_id=chat_id, message_id=msg_id)
             return
+        if site == "24sms7" or site == "tiger":
+            if len(valid_numbers[user_id]) >= 1:
+                break
+        elif site == "smsbower":
+            if len(valid_numbers[user_id]) >= 5:
+                break
         if site == "24sms7":
             resp = await get_number_24sms7(code)
         elif site == "smsbower":
@@ -292,8 +298,3 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
-
-
-
-
