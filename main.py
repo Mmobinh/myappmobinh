@@ -15,6 +15,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_KEY_24SMS7 = os.getenv("API_KEY_24SMS7")
 API_KEY_SMSBOWER = os.getenv("API_KEY_SMSBOWER")
 CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
+API_KEY_TIGER = os.getenv("API_KEY_TIGER")
 SERVICE = "tg"
 
 COUNTRIES_24SMS7 = {
@@ -291,3 +292,4 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
