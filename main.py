@@ -44,7 +44,6 @@ COUNTRIES_SMSBOWER = {
     "Country Slot 5": 0,
 }
 
-# ✅ تعداد درخواست هم‌زمان برای هر سرویس
 MAX_PARALLEL_REQUESTS = {
     "24sms7": 1,
     "smsbower": 5
@@ -132,8 +131,6 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("❌ کنسل جستجو", callback_data="cancel_search")],
         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
     ]))
-
-    # ✅ استفاده از مقدار قابل تنظیم
     max_requests = MAX_PARALLEL_REQUESTS.get(site, 1)
 
     async def run_parallel_search(i):
@@ -168,9 +165,13 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
         number = f"+{number}"
         valid = await check_valid(number)
         if valid:
+            text_template = (
+                "📱 شماره سالم: <code>{number}</code>\n"
+                "⏳ زمان باقی‌مانده: <b>{minutes:02}:{seconds:02}</b>"
+            )
             msg = await context.bot.send_message(
                 chat_id=chat_id,
-                text=f"📱 شماره سالم: <code>{number}</code>",
+                text=text_template.format(number=number, minutes=25, seconds=0),
                 parse_mode=ParseMode.HTML,
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("📩 دریافت کد", callback_data=f"checkcode_{id_}")],
@@ -179,6 +180,39 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 ])
             )
             valid_numbers[user_id].append((id_, site, number, msg.message_id))
+
+            async def update_timer():
+                total_seconds = 1500
+                while total_seconds > 0:
+                    await asyncio.sleep(1)
+                    total_seconds -= 1
+                    minutes, seconds = divmod(total_seconds, 60)
+                    try:
+                        await context.bot.edit_message_text(
+                            chat_id=chat_id,
+                            message_id=msg.message_id,
+                            text=text_template.format(number=number, minutes=minutes, seconds=seconds),
+                            parse_mode=ParseMode.HTML,
+                            reply_markup=InlineKeyboardMarkup([
+                                [InlineKeyboardButton("📩 دریافت کد", callback_data=f"checkcode_{id_}")],
+                                [InlineKeyboardButton("❌ لغو شماره", callback_data=f"cancel_{id_}")],
+                                [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
+                            ])
+                        )
+                    except:
+                        break
+                try:
+                    await context.bot.edit_message_text(
+                        chat_id=chat_id,
+                        message_id=msg.message_id,
+                        text=f"⛔ مهلت شماره <code>{number}</code> به پایان رسید.",
+                        parse_mode=ParseMode.HTML
+                    )
+                    await cancel_number(site, id_)
+                except:
+                    pass
+
+            asyncio.create_task(update_timer())
             asyncio.create_task(auto_check_code(user_id, chat_id, msg.message_id, id_, site, number, context))
         else:
             await context.bot.edit_message_text(
@@ -270,4 +304,3 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
