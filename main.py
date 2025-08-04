@@ -48,7 +48,7 @@ COUNTRIES_SMSBOWER = {
 }
 
 COUNTRIES_5SIM = {
-    "Russia": 0,
+    "hongkong": hongkong,
     "Ukraine": 1,
     "Kazakhstan": 2,
     # بقیه کشورها...
@@ -331,3 +331,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
