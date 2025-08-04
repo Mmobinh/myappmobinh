@@ -14,7 +14,6 @@ logging.basicConfig(level=logging.INFO)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_KEY_24SMS7 = os.getenv("API_KEY_24SMS7")
 API_KEY_SMSBOWER = os.getenv("API_KEY_SMSBOWER")
-API_KEY_TIGER_SMS = os.getenv("API_KEY_TIGER_SMS")
 CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
 SERVICE = "tg"
 
@@ -29,31 +28,22 @@ COUNTRIES_24SMS7 = {
     "Kazakhstan": 2,
     "Paraguay": 87,
     "Hong Kong": 14,
-    "Country Slot 1": 0,
-    "Country Slot 2": 0,
-    "Country Slot 3": 0,
-    "Country Slot 4": 0,
-    "Country Slot 5": 0,
 }
 
 COUNTRIES_SMSBOWER = {
     "Kazakhstan": 2,
-    "Country Slot 1": 0,
-    "Country Slot 2": 0,
-    "Country Slot 3": 0,
-    "Country Slot 4": 0,
-    "Country Slot 5": 0,
 }
 
 COUNTRIES_TIGER_SMS = {
-    # اگر کشوری داره اضافه کن اینجا
-    "Iran": 57,  # نمونه، در صورت نیاز اصلاح کن
+    "Iran": 57,
+    "Russia": 0,
+    "Ukraine": 1,
 }
 
 MAX_PARALLEL_REQUESTS = {
     "24sms7": 1,
     "smsbower": 5,
-    "tiger_sms": 3  # تعداد همزمان برای tiger-sms، میتونی تغییر بدی
+    "tiger": 3,
 }
 
 user_sessions = {}
@@ -73,8 +63,9 @@ async def get_number_smsbower(code):
         async with s.get(url) as r:
             return await r.text()
 
-async def get_number_tiger_sms(code):
-    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER_SMS}&action=getNumber&service={SERVICE}&country={code}"
+async def get_number_tiger(code):
+    API_KEY_TIGER = os.getenv("API_KEY_TIGER")
+    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}&ref=bot"
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
             return await r.text()
@@ -83,7 +74,7 @@ async def get_code(site, id_):
     url = {
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getStatus&id={id_}",
         "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getStatus&id={id_}",
-        "tiger_sms": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER_SMS}&action=getStatus&id={id_}"
+        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={os.getenv('API_KEY_TIGER')}&action=getStatus&id={id_}",
     }[site]
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
@@ -93,12 +84,10 @@ async def cancel_number(site, id_):
     url = {
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=setStatus&status=8&id={id_}",
         "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=setStatus&status=8&id={id_}",
-        "tiger_sms": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER_SMS}&action=setStatus&status=8&id={id_}"
+        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={os.getenv('API_KEY_TIGER')}&action=setStatus&status=8&id={id_}",
     }[site]
     async with aiohttp.ClientSession() as s:
         await s.get(url)
-
-# بقیه کد دقیقاً بدون تغییر
 
 async def check_valid(number):
     url = "http://checker.irbots.com:2021/check"
@@ -117,7 +106,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [
         [InlineKeyboardButton("24sms7", callback_data="site_24sms7")],
         [InlineKeyboardButton("SMSBower", callback_data="site_smsbower")],
-        [InlineKeyboardButton("Tiger SMS", callback_data="site_tiger_sms")],
+        [InlineKeyboardButton("Tiger SMS", callback_data="site_tiger")],
     ]
     await update.message.reply_text("🌐 انتخاب سرویس:", reply_markup=InlineKeyboardMarkup(buttons))
 
@@ -129,13 +118,22 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
         countries = COUNTRIES_24SMS7
     elif site == "smsbower":
         countries = COUNTRIES_SMSBOWER
-    else:  # tiger_sms
+    elif site == "tiger":
         countries = COUNTRIES_TIGER_SMS
+    else:
+        countries = {}
+
     buttons = [[InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}")] for name, id_ in countries.items()]
     buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
 
-# ... بقیه کد بدون تغییر ...
+async def back_to_sites(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await site_selected(update, context)
+
+async def back_to_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await start(update, context)
 
 async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -157,6 +155,14 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tasks = [asyncio.create_task(run_parallel_search(i)) for i in range(max_requests)]
     search_tasks[user_id] = tasks[0]
 
+async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = query.from_user.id
+    cancel_flags.add(user_id)
+    valid_numbers[user_id] = []
+    await query.answer("جستجو لغو شد")
+    await query.edit_message_text("🚫 جستجو لغو شد.")
+
 async def search_number(user_id, chat_id, msg_id, code, site, context):
     async def delayed_cancel(id_, site_):
         await asyncio.sleep(122)
@@ -173,8 +179,10 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             resp = await get_number_24sms7(code)
         elif site == "smsbower":
             resp = await get_number_smsbower(code)
+        elif site == "tiger":
+            resp = await get_number_tiger(code)
         else:
-            resp = await get_number_tiger_sms(code)
+            resp = ""
         if not resp.startswith("ACCESS_NUMBER"):
             await asyncio.sleep(1)
             continue
@@ -272,13 +280,12 @@ async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
+    application.add_handler(CallbackQueryHandler(back_to_sites, pattern="^back_to_sites$"))
+    application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back_to_start$"))
     application.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))
     application.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))
-    application.add_handler(CallbackQueryHandler(dynamic_cancel_number, pattern="^cancel_"))
     application.add_handler(CallbackQueryHandler(dynamic_check_code, pattern="^checkcode_"))
-    application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back_to_start$"))
-    application.add_handler(CallbackQueryHandler(back_to_sites, pattern="^back_to_sites$"))
-    print("✅ Bot is running...")
+    application.add_handler(CallbackQueryHandler(dynamic_cancel_number, pattern="^cancel_"))
     await application.run_polling()
 
 if __name__ == "__main__":
