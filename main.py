@@ -247,8 +247,9 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             await asyncio.sleep(5)
 
-    if user_id in search_tasks and not search_tasks[user_id].done():
+    if user_id in search_tasks:
     search_tasks[user_id].cancel()
+    del search_tasks[user_id]
 
 task = asyncio.create_task(search_number())
 search_tasks[user_id] = task
@@ -268,4 +269,5 @@ application.add_handler(CallbackQueryHandler(country_selected, pattern="^country
 await application.run_polling()
 
 if name == "main": nest_asyncio.apply() asyncio.get_event_loop().run_until_complete(main())
+
 
