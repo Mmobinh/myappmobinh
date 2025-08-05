@@ -287,8 +287,20 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ادامه کد main و handler ها بدون تغییر باقی می‌ماند
 
+async def start_webserver():
+    app = web.Application()
+    # اینجا میتونی روت‌ها و هندلرهای وب‌سرور رو اضافه کنی اگر نیاز داری
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", 8080)
+    await site.start()
+    print("Webserver started on port 8080")
+
+
 async def main():
-    await start_webserver()
+    # وب‌سرور را در پس‌زمینه اجرا کن
+    asyncio.create_task(start_webserver())
+
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
@@ -298,7 +310,9 @@ async def main():
     application.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))
     application.add_handler(CallbackQueryHandler(dynamic_check_code, pattern="^checkcode_"))
     application.add_handler(CallbackQueryHandler(dynamic_cancel_number, pattern="^cancel_"))
+    
     await application.run_polling()
+
 
 if __name__ == "__main__":
     nest_asyncio.apply()
