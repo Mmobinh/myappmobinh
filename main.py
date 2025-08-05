@@ -281,9 +281,9 @@ async def main():
     application.add_handler(CallbackQueryHandler(back_to_sites, pattern="^back_to_sites$"))
     application.add_handler(CallbackQueryHandler(cancel_request, pattern="^cancel_request$"))
 
-    await application.start()
-    await application.updater.start_polling()
-    await application.updater.idle()
+    # اجرای کامل و بی‌دردسر
+    await application.run_polling()
 
 if __name__ == "__main__":
     asyncio.run(main())
+
