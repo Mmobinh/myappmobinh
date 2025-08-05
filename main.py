@@ -247,63 +247,25 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             await asyncio.sleep(5)
 
-    if user_id in search_tasks:
-        search_tasks[user_id].cancel()
-    task = asyncio.create_task(search_number())
-    search_tasks[user_id] = task
+    if user_id in search_tasks and not search_tasks[user_id].done():
+    search_tasks[user_id].cancel()
 
-async def auto_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE, id_, site):
-    query = update.callback_query
-    user_id = query.from_user.id
+task = asyncio.create_task(search_number())
+search_tasks[user_id] = task
 
-    for _ in range(60):  # 5 دقیقه صبر کن (60*5 ثانیه)
-        if user_id in cancel_flags:
-            cancel_flags.remove(user_id)
-            await cancel_number(site, id_)
-            await query.edit_message_text("جستجو لغو شد.")
-            return
+async def auto_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE, id_: str, site: str): for _ in range(60): result = await get_code(site, id_) if "STATUS_OK" in result: code = result.split(":")[1] await update.callback_query.message.reply_text(f"کد دریافت شد: {code}", parse_mode=ParseMode.MARKDOWN) return await asyncio.sleep(2) await update.callback_query.message.reply_text("زمان دریافت کد به پایان رسید. شماره لغو شد.") await cancel_number(site, id_)
 
-        status = await get_code(site, id_)
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE): user_id = update.effective_user.id cancel_flags.add(user_id) await update.message.reply_text("درخواست لغو ارسال شد.")
 
-        if status.startswith("STATUS_OK:"):
-            code = status.split(":")[1]
-            await query.edit_message_text(f"کد دریافت شد: {code}")
-            return
-        elif status == "STATUS_WAIT_CODE":
-            await asyncio.sleep(5)
-        else:
-            await query.edit_message_text("خطا در دریافت کد.")
-            return
+async def main(): application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    await cancel_number(site, id_)
-    await query.edit_message_text("زمان انتظار کد به پایان رسید.")
+application.add_handler(CommandHandler("start", start))
+application.add_handler(CommandHandler("cancel", cancel))
+application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back$"))
+application.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
+application.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))
 
-async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    user_id = query.from_user.id
-    cancel_flags.add(user_id)
-    await query.edit_message_text("در حال لغو جستجو...")
+await application.run_polling()
 
-async def main():
-    nest_asyncio.apply()
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CallbackQueryHandler(site_selected, pattern=r"^site_"))
-    application.add_handler(CallbackQueryHandler(back_to_start, pattern="back"))
-    application.add_handler(CallbackQueryHandler(country_selected, pattern=r"^country_"))
-    application.add_handler(CallbackQueryHandler(cancel_search, pattern="cancel"))
-
-    await application.initialize()
-    await application.start()
-    await application.run_polling()
-
-if __name__ == "__main__":
-    import asyncio
-    import nest_asyncio
-
-    nest_asyncio.apply()
-    asyncio.get_event_loop().run_until_complete(main())
-
+if name == "main": nest_asyncio.apply() asyncio.get_event_loop().run_until_complete(main())
 
