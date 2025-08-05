@@ -269,8 +269,8 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                 ])
             )
             asyncio.create_task(delayed_cancel(id_, site))
-        await asyncio.sleep(1)
-        async def dynamic_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await asyncio.sleep(1) 
+async def dynamic_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
     await query.answer()
@@ -316,6 +316,7 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
 
 
