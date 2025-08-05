@@ -109,7 +109,7 @@ async def get_number_tiger(code):
 
 # این تابع جدید برای 5sim اضافه شد
 async def get_number_5sim(country, operator="any", product="tg"):
-    url = f"https://5sim.net/v1/user/buy/activation/{country}/{operator}/{product}"
+    url = f"https://5sim.net/v1/user/buy/activation/{hongkong}/{any}/{tg}"
     headers = {"Authorization": f"Bearer {API_KEY_5SIM}"}
     async with aiohttp.ClientSession(headers=headers) as s:
         async with s.get(url) as r:
@@ -380,4 +380,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
