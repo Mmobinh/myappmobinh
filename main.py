@@ -298,7 +298,8 @@ async def main():
     await application.initialize()
     await application.start()
     await application.updater.start_polling()
-    await application.idle()
+    await application.run_polling()
 
 if __name__ == "__main__":
     asyncio.run(main())
+
