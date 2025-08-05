@@ -153,10 +153,12 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def back_to_sites(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    await query.answer()
     await site_selected(update, context)
 
 async def back_to_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    await query.answer()
     await start(update, context)
 
 async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -331,4 +333,3 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
