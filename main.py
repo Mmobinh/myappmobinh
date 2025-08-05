@@ -270,19 +270,21 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             )
             asyncio.create_task(delayed_cancel(id_, site))
         await asyncio.sleep(1)
-        async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        async def dynamic_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
     await query.answer()
     id_ = query.data.split("_")[1]
-    new_list = []
     for rec in valid_numbers.get(user_id, []):
         if rec[0] == id_:
-            await cancel_number(rec[1], rec[0])
-            await context.bot.edit_message_text(
-                f"❌ شماره لغو شد: <code>{rec[2]}</code>",
-                chat_id=query.message.chat_id, message_id=rec[3], parse_mode=ParseMode.HTML
-            )
+            _, site, number, msg_id = rec
+            resp = await get_code(site, id_)
+            if resp.startswith("STATUS_OK:"):
+                code = resp[len("STATUS_OK:"):].strip()
+                await context.bot.edit_message_text(
+                    f"📩 کد برای شماره <code>{number}</code> دریافت شد:\n<code>{code}</code>",
+                    chat_id=query.message.chat_id, message_id=msg_id, parse_mode=ParseMode.HTML
+                )
         else:
             new_list.append(rec)
     valid_numbers[user_id] = new_list
@@ -314,6 +316,7 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
 
 
