@@ -381,5 +381,38 @@ async def main():
 if __name__ == "__main__":
     asyncio.run(main())
 
+async def auto_check_code(user_id, chat_id, msg_id, id_, site, number, context):
+    try:
+        for _ in range(60):  # مثلاً تا 60 بار تلاش کنه (حدود 2 دقیقه)
+            resp = await get_code(site, id_)
+            if site == "5sim":
+                import json
+                try:
+                    data = json.loads(resp)
+                    if data.get("sms"):
+                        code = data["sms"][0].get("code") or data["sms"][0].get("text")
+                        if code:
+                            await context.bot.edit_message_text(
+                                chat_id=chat_id,
+                                message_id=msg_id,
+                                text=f"✅ کد برای شماره <code>{number}</code> دریافت شد:\n<code>{code}</code>",
+                                parse_mode=ParseMode.HTML
+                            )
+                            return
+                except Exception:
+                    pass
+            else:
+                if resp.startswith("STATUS_OK:"):
+                    code = resp[len("STATUS_OK:"):].strip()
+                    await context.bot.edit_message_text(
+                        chat_id=chat_id,
+                        message_id=msg_id,
+                        text=f"✅ کد برای شماره <code>{number}</code> دریافت شد:\n<code>{code}</code>",
+                        parse_mode=ParseMode.HTML
+                    )
+                    return
+            await asyncio.sleep(2)  # هر 2 ثانیه یک‌بار چک کند
+    except Exception as e:
+        logging.error(f"Error in auto_check_code: {e}")
 
 
