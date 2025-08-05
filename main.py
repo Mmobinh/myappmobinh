@@ -303,7 +303,6 @@ async def cancel_number_handler(update: Update, context: ContextTypes.DEFAULT_TY
             break
 
 async def main():
-    nest_asyncio.apply()
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -315,11 +314,7 @@ async def main():
     application.add_handler(CallbackQueryHandler(dynamic_check_code, pattern=r"^checkcode_"))
     application.add_handler(CallbackQueryHandler(cancel_number_handler, pattern=r"^cancel_"))
 
-    await application.initialize()
-    await application.start()
-    logging.info("Bot started.")
-    await application.updater.start_polling()
-    await application.updater.idle()
-
+    await application.run_polling()
 if __name__ == "__main__":
     asyncio.run(main())
+
