@@ -127,8 +127,7 @@ async def check_valid(number):
                     result = data.get("data", {}).get(f"+{number.strip('+')}", False)
                     return result is True
     return False
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [
         [InlineKeyboardButton("24sms7", callback_data="site_24sms7")],
         [InlineKeyboardButton("SMSBower", callback_data="site_smsbower")],
@@ -185,7 +184,12 @@ async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
     cancel_flags.add(user_id)
+
+    task = search_tasks.get(user_id)
+    if task and not task.done():
+        task.cancel()
     valid_numbers[user_id] = []
+
     await query.answer("جستجو لغو شد")
     await query.edit_message_text("🚫 جستجو لغو شد.")
 
@@ -284,16 +288,33 @@ async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TY
     user_id = query.from_user.id
     await query.answer()
     id_ = query.data.split("_")[1]
+
     new_list = []
+    found = False
     for rec in valid_numbers.get(user_id, []):
         if rec[0] == id_:
-            await cancel_number(rec[1], rec[0])
-            await context.bot.edit_message_text(
-                f"❌ شماره لغو شد: <code>{rec[2]}</code>",
-                chat_id=query.message.chat_id, message_id=rec[3], parse_mode=ParseMode.HTML
-            )
+            found = True
+            try:
+                await cancel_number(rec[1], rec[0])
+                await context.bot.edit_message_text(
+                    f"❌ شماره لغو شد: <code>{rec[2]}</code>",
+                    chat_id=query.message.chat_id,
+                    message_id=rec[3],
+                    parse_mode=ParseMode.HTML
+                )
+            except Exception as e:
+                await context.bot.edit_message_text(
+                    f"⚠️ خطا در لغو شماره: <code>{rec[2]}</code>\n{str(e)}",
+                    chat_id=query.message.chat_id,
+                    message_id=rec[3],
+                    parse_mode=ParseMode.HTML
+                )
         else:
             new_list.append(rec)
+
+    if not found:
+        await query.answer("شماره‌ای برای لغو پیدا نشد.", show_alert=True)
+
     valid_numbers[user_id] = new_list
 
 async def web_handler(request):
@@ -323,6 +344,3 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
-
-
