@@ -18,7 +18,7 @@ CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
 API_KEY_TIGER = os.getenv("API_KEY_TIGER")
 API_KEY_5SIM = os.getenv("API_KEY_5SIM")  # کلید API 5sim که اضافه شد
 SERVICE = "tg"
-
+product = "tg"
 COUNTRIES_24SMS7 = {
     "Iran": 57,
     "Russia": 0,
@@ -380,3 +380,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
