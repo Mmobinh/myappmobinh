@@ -70,7 +70,7 @@ COUNTRIES_TIGER_SMS = {
 # اضافه کردن 5sim کشورها (مثلا یه نمونه که خودت باید کامل کنی)
 COUNTRIES_5SIM = {
     "Iran": "ir",
-    "Russia": "ru",
+    "Hongkong": "hongkong",
     "Ukraine": "ua",
     "USA": "us",
     # سایر کشورها رو به دلخواه اضافه کن
@@ -380,4 +380,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
