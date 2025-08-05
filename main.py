@@ -169,7 +169,7 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     site = query.data.split("_")[1]
     user_sessions[query.from_user.id] = {"site": site}
-    # بر اساس سایت، کشورها را تنظیم کن
+
     if site == "24sms7":
         countries = COUNTRIES_24SMS7
     elif site == "smsbower":
@@ -203,14 +203,9 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = query.from_user.id
     site = user_sessions[user_id]["site"]
-
-    # کشور انتخابی
-    data = query.data
-    country_code = data.split("_")[1]
-
+    country_code = query.data.split("_")[1]
     user_sessions[user_id]["country_code"] = country_code
 
-    # شروع گرفتن شماره
     await query.edit_message_text("در حال دریافت شماره...")
 
     if site == "24sms7":
@@ -245,30 +240,43 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.edit_message_text(f"شماره دریافت شد: {phone}\nدر حال انتظار پیام...")
                 await auto_check_code(update, context, id_, site)
                 return
+
             await asyncio.sleep(5)
 
-            if user_id in search_tasks:
-    search_tasks[user_id].cancel()
-    del search_tasks[user_id]
+    if user_id in search_tasks:
+        search_tasks[user_id].cancel()
+        del search_tasks[user_id]
 
-task = asyncio.create_task(search_number())
-search_tasks[user_id] = task
+    task = asyncio.create_task(search_number())
+    search_tasks[user_id] = task
 
-async def auto_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE, id_: str, site: str): for _ in range(60): result = await get_code(site, id_) if "STATUS_OK" in result: code = result.split(":")[1] await update.callback_query.message.reply_text(f"کد دریافت شد: {code}", parse_mode=ParseMode.MARKDOWN) return await asyncio.sleep(2) await update.callback_query.message.reply_text("زمان دریافت کد به پایان رسید. شماره لغو شد.") await cancel_number(site, id_)
+async def auto_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE, id_: str, site: str):
+    for _ in range(60):
+        result = await get_code(site, id_)
+        if "STATUS_OK" in result:
+            code = result.split(":")[1]
+            await update.callback_query.message.reply_text(f"کد دریافت شد: {code}", parse_mode=ParseMode.MARKDOWN)
+            return
+        await asyncio.sleep(2)
+    await update.callback_query.message.reply_text("زمان دریافت کد به پایان رسید. شماره لغو شد.")
+    await cancel_number(site, id_)
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE): user_id = update.effective_user.id cancel_flags.add(user_id) await update.message.reply_text("درخواست لغو ارسال شد.")
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    cancel_flags.add(user_id)
+    await update.message.reply_text("درخواست لغو ارسال شد.")
 
-async def main(): application = ApplicationBuilder().token(BOT_TOKEN).build()
+async def main():
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
 
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CommandHandler("cancel", cancel))
-application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back$"))
-application.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
-application.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("cancel", cancel))
+    application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back$"))
+    application.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
+    application.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))
 
-await application.run_polling()
+    await application.run_polling()
 
-if name == "main": nest_asyncio.apply() asyncio.get_event_loop().run_until_complete(main())
-
-
-
+if __name__ == "__main__":
+    nest_asyncio.apply()
+    asyncio.get_event_loop().run_until_complete(main())
