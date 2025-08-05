@@ -127,7 +127,6 @@ async def check_valid(number):
                     result = data.get("data", {}).get(f"+{number.strip('+')}", False)
                     return result is True
     return False
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [
         [InlineKeyboardButton("24sms7", callback_data="site_24sms7")],
@@ -242,3 +241,4 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
