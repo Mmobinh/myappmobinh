@@ -8,10 +8,10 @@ from telegram.constants import ParseMode
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 from aiohttp import web
 
-# Setup logging
+# تنظیمات لاگ
 logging.basicConfig(level=logging.INFO)
 
-# Environment variables
+# متغیرهای محیطی و کلیدهای API
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 API_KEY_24SMS7 = os.getenv("API_KEY_24SMS7")
 API_KEY_SMSBOWER = os.getenv("API_KEY_SMSBOWER")
@@ -19,66 +19,25 @@ API_KEY_TIGER = os.getenv("API_KEY_TIGER")
 CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
 SERVICE = "tg"
 
+# کشورهای مختلف بنابر سرویس‌ها
 COUNTRIES = {
     "24sms7": {
-    "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
-        # Add other countries here
+        "Iran": 57, "Russia": 0, "Ukraine": 1, "Kazakhstan": 2, "Mexico": 54,
+        "Italy": 86, "Spain": 56, "Czech Republic": 63
+        # کشورهای دیگر بر حسب نیاز اضافه شوند
     },
     "smsbower": {
         "Kazakhstan": 2,
-          "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
-        # Add more countries here
+        # کشورهای دیگر بر حسب نیاز اضافه شوند
     },
     "tiger": {
-    "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
-        # Add other countries here
+        "Iran": 57, "Russia": 0, "Ukraine": 1, "Kazakhstan": 2, "Paraguay": 87,
+        "Hong Kong": 14, "Ireland": 23
+        # کشورهای دیگر بر حسب نیاز اضافه شوند
     }
 }
 
-OPERATORS = {
-    "Operator 1": "1000",
-    "Operator 2": "2196",
-    "Operator 3": "2195",
-    "Operator 4": "2194",
-    "Operator 5": "3134",
-    "Operator 6": "2881",
-    "Operator 7": "188",
-    "Operator 8": "55",
-    "Operator 9": "234",
-    "Operator 10": "2194",
-    "Operator 11": "3134",
-    "Operator 12": "2881",
-    
-    # Add other operators here
-}
-
+# حداکثر تعداد درخواست‌های همزمان
 MAX_PARALLEL_REQUESTS = {
     "24sms7": 1,
     "smsbower": 5,
@@ -90,6 +49,7 @@ search_tasks = {}
 cancel_flags = set()
 valid_numbers = {}
 
+# تابعی برای دریافت اطلاعات از URL
 async def fetch_url(url):
     try:
         async with aiohttp.ClientSession() as session:
@@ -99,14 +59,16 @@ async def fetch_url(url):
         logging.error(f"Error fetching URL {url}: {e}")
         return "ERROR"
 
-async def get_number(site, code, operator):
+# تابعی برای دریافت شماره تلفن
+async def get_number(site, code):
     base_urls = {
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getNumber&service={SERVICE}&country={code}",
-        "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&providerIds={operator}",
-        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}&providerIds={operator}",
+        "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}",
+        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}",
     }
     return await fetch_url(base_urls.get(site, ""))
 
+# بررسی معتبر بودن شماره
 async def check_valid(number):
     url = "http://checker.irbots.com:2021/check"
     params = {"key": CHECKER_API_KEY, "numbers": number.strip("+")}
@@ -117,6 +79,7 @@ async def check_valid(number):
                 return data.get("status") == "ok" and data["data"].get(f"+{number.strip('+')}", False) is True
     return False
 
+# تعریف هندی
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [[InlineKeyboardButton(site.capitalize(), callback_data=f"site_{site}")] for site in COUNTRIES.keys()]
     await update.message.reply_text("🌐 انتخاب سرویس:", reply_markup=InlineKeyboardMarkup(buttons))
@@ -132,6 +95,7 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
 
+# تابع کمکی برای تکه‌تکه کردن دکمه‌ها
 def chunk_buttons(button_list, n):
     return [button_list[i:i + n] for i in range(0, len(button_list), n)]
 
@@ -142,27 +106,17 @@ async def back_to_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
-    site, country_code = query.data.split("_")[1:]
-    operator_buttons = [InlineKeyboardButton(name, callback_data=f"operator_{site}_{country_code}_{code}") for name, code in OPERATORS.items()]
-    buttons = chunk_buttons(operator_buttons, 3)
-    buttons.append([InlineKeyboardButton("🔙 بازگشت به انتخاب کشور", callback_data=f"site_{site}")])
-    await query.edit_message_text("🏢 انتخاب اپراتور:", reply_markup=InlineKeyboardMarkup(buttons))
-
-async def operator_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    _, site, country_code, operator_code = query.data.split("_")
     user_id = query.from_user.id
     cancel_flags.discard(user_id)
     valid_numbers[user_id] = []
+    site, code = query.data.split("_")[1], query.data.split("_")[2]
     msg = await query.edit_message_text("⏳ جستجو برای شماره سالم...", reply_markup=InlineKeyboardMarkup([
         [InlineKeyboardButton("❌ کنسل جستجو", callback_data="cancel_search")],
-        [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
+        [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")]
     ]))
 
     max_requests = MAX_PARALLEL_REQUESTS.get(site, 1)
-    tasks = [asyncio.create_task(search_number(user_id, query.message.chat_id, msg.message_id, country_code, operator_code, site, context)) for _ in range(max_requests)]
+    tasks = [asyncio.create_task(search_number(user_id, query.message.chat_id, msg.message_id, code, site, context)) for _ in range(max_requests)]
     search_tasks[user_id] = tasks
 
 async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -177,12 +131,12 @@ async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     search_tasks.pop(user_id, None)
     await query.edit_message_text("🚫 جستجو لغو شد.")
 
-async def search_number(user_id, chat_id, msg_id, country_code, operator_code, site, context):
+async def search_number(user_id, chat_id, msg_id, code, site, context):
     while user_id not in cancel_flags:
         if (site in ["24sms7", "tiger"] and len(valid_numbers[user_id]) >= 1) or (site == "smsbower" and len(valid_numbers[user_id]) >= 5):
             break
 
-        resp = await get_number(site, country_code, operator_code)
+        resp = await get_number(site, code)
         if not resp.startswith("ACCESS_NUMBER"):
             await asyncio.sleep(1)
             continue
@@ -198,7 +152,7 @@ async def search_number(user_id, chat_id, msg_id, country_code, operator_code, s
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("📩 دریافت کد", callback_data=f"checkcode_{id_}")],
                     [InlineKeyboardButton("❌ لغو شماره", callback_data=f"cancel_{id_}")],
-                    [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")]
                 ])
             )
             valid_numbers[user_id].append((id_, site, number, msg.message_id))
@@ -209,7 +163,7 @@ async def search_number(user_id, chat_id, msg_id, country_code, operator_code, s
                 chat_id=chat_id, message_id=msg_id, parse_mode=ParseMode.HTML,
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("❌ کنسل جستجو", callback_data="cancel_search")],
-                    [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")]
                 ])
             )
             asyncio.create_task(asyncio.sleep(122, cancel_number(site, id_)))
@@ -269,6 +223,7 @@ async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TY
             new_list.append(rec)
     valid_numbers[user_id] = new_list
 
+# وب‌سرور برای اطمینان از زنده بودن ربات
 async def web_handler(request):
     return web.Response(text="✅ Bot is Alive!")
 
@@ -280,15 +235,14 @@ async def start_webserver():
     site = web.TCPSite(runner, "0.0.0.0", 8080)
     await site.start()
 
+# تابع اصلی برای آغاز کردن ربات
 async def main():
     await start_webserver()
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
-    application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back_to_sites$"))
     application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back_to_start$"))
     application.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))
-    application.add_handler(CallbackQueryHandler(operator_selected, pattern="^operator_"))
     application.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))
     application.add_handler(CallbackQueryHandler(dynamic_check_code, pattern="^checkcode_"))
     application.add_handler(CallbackQueryHandler(dynamic_cancel_number, pattern="^cancel_"))
@@ -297,5 +251,3 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
-
