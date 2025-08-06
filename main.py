@@ -14,20 +14,19 @@ API_KEY_TIGER = os.getenv("API_KEY_TIGER")
 CHECKER_API_KEY = os.getenv("CHECKER_API_KEY")
 SERVICE = "tg"
 
-# داده‌ها
+if not all([BOT_TOKEN, API_KEY_24SMS7, API_KEY_SMSBOWER, API_KEY_TIGER, CHECKER_API_KEY]):
+    raise ValueError("API keys and bot token must be provided.")
+
 COUNTRIES_24SMS7 = {
     "Iran": 57, "Russia": 0, "Ukraine": 1, "Mexico": 54, "Italy": 86, "Spain": 56,
-    # بقیه کشورها...
 }
 
 COUNTRIES_SMSBOWER = {
     "Kazakhstan": 2,
-    # بقیه کشورها...
 }
 
 COUNTRIES_TIGER_SMS = {
     "Iran": 57, "Russia": 0, "Ukraine": 1,
-    # بقیه کشورها...
 }
 
 OPERATORS = {
@@ -39,36 +38,41 @@ MAX_PARALLEL_REQUESTS = {"24sms7": 1, "smsbower": 5, "tiger": 1}
 
 cancel_flags = set()
 valid_numbers = {}
+tasks = {}
+
+async def safe_request(url, params=None):
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, params=params) as response:
+                response.raise_for_status()
+                return await response.text()
+    except aiohttp.ClientError as e:
+        logging.error(f"HTTP error occurred: {e}")
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+    return None
 
 async def get_number_24sms7(code):
     url = f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getNumber&service={SERVICE}&country={code}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            return await resp.text()
+    return await safe_request(url)
 
 async def get_number_smsbower(code, operator=""):
     url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&providerIds={operator}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            return await resp.text()
+    return await safe_request(url)
 
 async def get_number_tiger(code, operator=""):
     url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}&providerIds={operator}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            return await resp.text()
+    return await safe_request(url)
 
 async def check_valid(number):
     url = "http://checker.irbots.com:2021/check"
     params = {"key": CHECKER_API_KEY, "numbers": number.strip("+")}
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url, params=params) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                status = data.get("status")
-                if status == "ok":
-                    return data.get("data", {}).get(number.strip("+"), False)
-            return False
+    response = await safe_request(url, params)
+    if response:
+        data = await aiohttp.ClientResponse.json(response)
+        if data.get("status") == "ok":
+            return data.get("data", {}).get(number.strip("+"), False)
+    return False
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [
@@ -128,7 +132,9 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     max_requests = MAX_PARALLEL_REQUESTS.get(site, 1)
 
     async def search_loop():
-        while user_id not in cancel_flags:
+        tries = 0
+        while user_id not in cancel_flags and tries < 100:
+            tries += 1
             if site == "24sms7":
                 number_response = await get_number_24sms7(code)
             elif site == "smsbower":
@@ -136,27 +142,30 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 number_response = await get_number_tiger(code, operator)
 
-            if number_response.startswith("ACCESS_NUMBER"):
+            if number_response and number_response.startswith("ACCESS_NUMBER"):
                 number = number_response.split(":")[-1].strip()
                 is_valid = await check_valid(number)
                 if is_valid:
                     valid_numbers[user_id].append(number)
                     await context.bot.send_message(user_id, f"✅ شماره سالم پیدا شد: `{number}`", parse_mode="Markdown")
-                    # می‌تونی اینجا بر اساس نیاز ادامه بدی
                     break
-            else:
-                await asyncio.sleep(5)
+            if tries % 10 == 0:
+                await context.bot.send_message(user_id, f"🔄 تلاش {tries}: هنوز در حال جستجو...")
+            await asyncio.sleep(5)
+        
+        if tries >= 100:
+            await context.bot.send_message(user_id, "🔍 جستجو به پایان رسید بدون یافتن شماره معتبر.")
 
-    task = asyncio.create_task(search_loop())
-    # ذخیره یا مدیریت task در صورت نیاز
+    tasks[user_id] = asyncio.create_task(search_loop())
 
 async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
+    if user_id in tasks:
+        tasks[user_id].cancel()
     cancel_flags.add(user_id)
     await query.edit_message_text("❌ جستجو لغو شد.")
-
 
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = update.callback_query.data
