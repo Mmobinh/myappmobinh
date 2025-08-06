@@ -55,7 +55,7 @@ COUNTRIES_24SMS7 = {
 
 COUNTRIES_SMSBOWER = {
     "Kazakhstan": 2,
-    "Country Slot 1": 0,
+    "cameron": 41,
     "Country Slot 2": 0,
     "try Slot 3": 0,
     "Country Slot 4": 0,
@@ -214,14 +214,11 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_countries(query, site, context)
 
 async def show_countries(query, site, context, operator=""):
-    if site == "24sms7":
-        countries = COUNTRIES_24SMS7
-    elif site == "smsbower":
-        countries = COUNTRIES_SMSBOWER
-    elif site == "tiger":
-        countries = COUNTRIES_TIGER_SMS
-    else:
-        countries = {}
+    countries = {
+        "24sms7": COUNTRIES_24SMS7,
+        "smsbower": COUNTRIES_SMSBOWER,
+        "tiger": COUNTRIES_TIGER_SMS,
+    }.get(site, {})
 
     country_buttons = [InlineKeyboardButton(name, callback_data=f"country_{site}_{operator}_{id_}") for name, id_ in countries.items()]
     buttons = chunk_buttons(country_buttons, 3)
@@ -372,16 +369,27 @@ async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer()
     id_ = query.data.split("_")[1]
     new_list = []
+
+    found = False
     for rec in valid_numbers.get(user_id, []):
         if rec[0] == id_:
-            await cancel_number(rec[1], rec[0])
-            await context.bot.edit_message_text(
-                f"❌ شماره لغو شد: <code>{rec[2]}</code>",
-                chat_id=query.message.chat_id, message_id=rec[3], parse_mode=ParseMode.HTML
-            )
+            found = True
+            try:
+                await cancel_number(rec[1], rec[0])
+                await context.bot.edit_message_text(
+                    f"❌ شماره لغو شد: <code>{rec[2]}</code>",
+                    chat_id=query.message.chat_id,
+                    message_id=rec[3],
+                    parse_mode=ParseMode.HTML
+                )
+            except Exception as e:
+                logging.error(f"Error editing message: {e}")
         else:
             new_list.append(rec)
     valid_numbers[user_id] = new_list
+
+    if not found:
+        await query.answer("شماره مورد نظر یافت نشد.", show_alert=True)
 
 async def web_handler(request):
     return web.Response(text="✅ Bot is Alive!")
@@ -411,4 +419,3 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
