@@ -21,22 +21,61 @@ SERVICE = "tg"
 
 COUNTRIES = {
     "24sms7": {
-        "Iran": 57, "Russia": 0, "Ukraine": 1, "Kazakhstan": 2, "Mexico": 54,
+    "Iran": 57,
+    "Russia": 0,
+    "Ukraine": 1,
+    "Mexico": 54,
+    "Italy": 86,
+    "Spain": 56,
+    "Czech Republic": 63,
+    "Kazakhstan": 2,
+    "Paraguay": 87,
+    "Hong Kong": 14,
         # Add other countries here
     },
     "smsbower": {
         "Kazakhstan": 2,
+          "Iran": 57,
+    "Russia": 0,
+    "Ukraine": 1,
+    "Mexico": 54,
+    "Italy": 86,
+    "Spain": 56,
+    "Czech Republic": 63,
+    "Kazakhstan": 2,
+    "Paraguay": 87,
+    "Hong Kong": 14,
         # Add more countries here
     },
     "tiger": {
-        "Iran": 57, "Russia": 0, "Ukraine": 1, "Kazakhstan": 2, "Paraguay": 87,
+    "Iran": 57,
+    "Russia": 0,
+    "Ukraine": 1,
+    "Mexico": 54,
+    "Italy": 86,
+    "Spain": 56,
+    "Czech Republic": 63,
+    "Kazakhstan": 2,
+    "Paraguay": 87,
+    "Hong Kong": 14,
         # Add other countries here
     }
 }
 
 OPERATORS = {
-    "Operator 1": "001",
-    "Operator 2": "002",
+    "Operator 1": "1000",
+    "Operator 2": "2196",
+    "Operator 3": "2195",
+    "Operator 4": "2194",
+    "Operator 5": "3134",
+    "Operator 6": "2881",
+    "Operator 7": "188",
+    "Operator 8": "55",
+    "Operator 9": "234",
+    "Operator 10": "2194",
+    "Operator 11": "3134",
+    "Operator 12": "2881",
+    
     # Add other operators here
 }
 
@@ -258,3 +297,4 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
