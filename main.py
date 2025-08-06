@@ -134,7 +134,7 @@ async def get_number_smsbower(code):
             return await r.text()
 
 async def get_number_tiger(code):
-    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=60&providerIds=55,188,234"
+    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=35&providerIds="
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
             return await r.text()
@@ -365,3 +365,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
