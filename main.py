@@ -105,7 +105,7 @@ COUNTRIES_TIGER_SMS = {
     "uzbekistan": 40,
     "zimbabwe": 96,
     "zambie": 147,
-    "Country Slot 8": 0,
+    "bolivi": 92,
     "Country Slot 9": 0,
     "Country Slot 10": 0,
 }
@@ -383,6 +383,7 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
 
 
