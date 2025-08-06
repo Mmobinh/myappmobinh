@@ -110,6 +110,22 @@ COUNTRIES_TIGER_SMS = {
     "Country Slot 10": 0,
 }
 
+OPERATORS = {
+    "smsbower": {
+        "All": "",
+        "MTT": "2195",
+        "SIM4G": "2194",
+        "NTC": "2196",
+        "SMS": "1000",
+    },
+    "tiger": {
+        "All": "",
+        "Provider 55": "55",
+        "Provider 188": "188",
+        "Provider 234": "234",
+    }
+}
+
 MAX_PARALLEL_REQUESTS = {
     "24sms7": 1,
     "smsbower": 5,
@@ -127,14 +143,14 @@ async def get_number_24sms7(code):
         async with s.get(url) as r:
             return await r.text()
 
-async def get_number_smsbower(code):
-    url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=58.67&providerIds=2195,2194,2196,1000&exceptProviderIds=&phoneException=7700,7708"
+async def get_number_smsbower(code, operator=""):
+    url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=58.67&providerIds={operator}&exceptProviderIds=&phoneException=7700,7708"
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
             return await r.text()
 
-async def get_number_tiger(code):
-    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=60&providerIds=55,188,234"
+async def get_number_tiger(code, operator=""):
+    url = f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}&maxPrice=60&providerIds={operator}"
     async with aiohttp.ClientSession() as s:
         async with s.get(url) as r:
             return await r.text()
@@ -186,6 +202,16 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     site = query.data.split("_")[1]
+
+    if site in OPERATORS:
+        operator_buttons = [InlineKeyboardButton(name, callback_data=f"operator_{site}_{id_}") for name, id_ in OPERATORS[site].items()]
+        buttons = chunk_buttons(operator_buttons, 2)
+        buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
+        await query.edit_message_text("📡 انتخاب اپراتور:", reply_markup=InlineKeyboardMarkup(buttons))
+    else:
+        await show_countries(query, site, context)
+
+async def show_countries(query, site, context, operator=""):
     if site == "24sms7":
         countries = COUNTRIES_24SMS7
     elif site == "smsbower":
@@ -195,10 +221,9 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         countries = {}
 
-    country_buttons = [InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}") for name, id_ in countries.items()]
+    country_buttons = [InlineKeyboardButton(name, callback_data=f"country_{site}_{operator}_{id_}") for name, id_ in countries.items()]
     buttons = chunk_buttons(country_buttons, 3)
     buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
-    
     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
 
 async def back_to_sites(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -214,7 +239,7 @@ async def back_to_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    _, site, code = query.data.split("_")
+    _, site, operator, code = query.data.split("_")
     user_id = query.from_user.id
     cancel_flags.discard(user_id)
     valid_numbers[user_id] = []
@@ -227,7 +252,7 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     async def run_parallel_search(i):
         try:
-            await search_number(user_id, query.message.chat_id, msg.message_id, code, site, context)
+            await search_number(user_id, query.message.chat_id, msg.message_id, code, site, context, operator)
         except asyncio.CancelledError:
             pass
 
@@ -248,7 +273,7 @@ async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer("جستجو لغو شد")
     await query.edit_message_text("🚫 جستجو لغو شد.")
 
-async def search_number(user_id, chat_id, msg_id, code, site, context):
+async def search_number(user_id, chat_id, msg_id, code, site, context, operator=""):
     async def delayed_cancel(id_, site_):
         await asyncio.sleep(122)
         active_ids = [i[0] for i in valid_numbers.get(user_id, [])]
@@ -264,9 +289,9 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
         if site == "24sms7":
             resp = await get_number_24sms7(code)
         elif site == "smsbower":
-            resp = await get_number_smsbower(code)
+            resp = await get_number_smsbower(code, operator)
         elif site == "tiger":
-            resp = await get_number_tiger(code)
+            resp = await get_number_tiger(code, operator)
         else:
             resp = ""
 
@@ -378,6 +403,7 @@ async def main():
     application.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))
     application.add_handler(CallbackQueryHandler(dynamic_check_code, pattern="^checkcode_"))
     application.add_handler(CallbackQueryHandler(dynamic_cancel_number, pattern="^cancel_"))
+    application.add_handler(CallbackQueryHandler(lambda u, c: asyncio.create_task(show_countries(u.callback_query, u.callback_query.data.split("_")[1], c, u.callback_query.data.split("_")[2])), pattern="^operator_"))
     await application.run_polling()
 
 if __name__ == "__main__":
