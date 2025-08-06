@@ -52,6 +52,7 @@ COUNTRIES_24SMS7 = {
 
 COUNTRIES_SMSBOWER = {
     "Kazakhstan": 2,
+    "cameron": 41,
     # ... (بقیه کشورها اگر لازم بود اضافه کنید)
 }
 
@@ -339,3 +340,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
