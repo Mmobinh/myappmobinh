@@ -106,7 +106,7 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     country_buttons = [InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}") for name, id_ in countries.items()]
     buttons = chunk_buttons(country_buttons, 3)
-    buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
+    buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")])
     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
 
 # Utility function to chunk button list
@@ -116,7 +116,12 @@ def chunk_buttons(button_list, n):
 async def back_to_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await start(update, context)
+    await start(query.message, context)
+
+async def back_to_sites(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await site_selected(query, context)
 
 async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -261,7 +266,7 @@ async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
-    application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back_to_sites$"))
+    application.add_handler(CallbackQueryHandler(back_to_sites, pattern="^back_to_sites$"))
     application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back_to_start$"))
     application.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))
     application.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))
@@ -272,5 +277,3 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
-
