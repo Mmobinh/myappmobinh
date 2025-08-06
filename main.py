@@ -30,8 +30,8 @@ COUNTRIES_TIGER_SMS = {
 }
 
 OPERATORS = {
-    "smsbower": {"All": "", "2195": "2195", "2194": "2194"},
-    "tiger": {"All": "", "Provider 55": "55"},
+    "smsbower": {"All": "", "2195": "2195", "2194": "2194", "1000": "1000", "2887": "2887", "3134": "3134"},
+    "tiger": {"All": "", "Provider 55": "55", "188": "188", "234": "234"},
 }
 
 MAX_PARALLEL_REQUESTS = {"24sms7": 1, "smsbower": 5, "tiger": 1}
@@ -189,3 +189,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
