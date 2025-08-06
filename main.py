@@ -169,6 +169,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     await update.message.reply_text("🌐 انتخاب سرویس:", reply_markup=InlineKeyboardMarkup(buttons))
 
+def chunk_buttons(button_list, n):
+    return [button_list[i:i + n] for i in range(0, len(button_list), n)]
+
 async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -181,8 +184,11 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
         countries = COUNTRIES_TIGER_SMS
     else:
         countries = {}
-    buttons = [[InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}")] for name, id_ in countries.items()]
+
+    country_buttons = [InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}") for name, id_ in countries.items()]
+    buttons = chunk_buttons(country_buttons, 3)
     buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
+    
     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
 
 async def back_to_sites(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -367,6 +373,7 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
 
 
