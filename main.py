@@ -108,13 +108,13 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cancel_flags.discard(user_id)
     valid_numbers[user_id] = []
     site, code = query.data.split("_")[1], query.data.split("_")[2]
-    msg = await query.edit_message_text("⏳ جستجو برای شماره سالم...", reply_markup=InlineKeyboardMarkup([
+    await query.edit_message_text("⏳ جستجو برای شماره سالم...", reply_markup=InlineKeyboardMarkup([
         [InlineKeyboardButton("❌ کنسل جستجو", callback_data="cancel_search")],
-        [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")]
+        [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
     ]))
 
     max_requests = MAX_PARALLEL_REQUESTS.get(site, 1)
-    tasks = [asyncio.create_task(search_number(user_id, query.message.chat_id, msg.message_id, code, site, context)) for _ in range(max_requests)]
+    tasks = [asyncio.create_task(search_number(user_id, query.message.chat_id, query.message.message_id, code, site, context)) for _ in range(max_requests)]
     search_tasks[user_id] = tasks
 
 async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -143,9 +143,10 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
         number = f"+{number}"
         valid = await check_valid(number)
         if valid:
-            msg = await context.bot.send_message(
-                chat_id=chat_id,
+            await context.bot.edit_message_text(
                 text=f"📱 شماره سالم: <code>{number}</code>",
+                chat_id=chat_id,
+                message_id=msg_id,
                 parse_mode=ParseMode.HTML,
                 reply_markup=InlineKeyboardMarkup([
                     [InlineKeyboardButton("📩 دریافت کد", callback_data=f"checkcode_{id_}")],
@@ -153,8 +154,8 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                     [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
                 ])
             )
-            valid_numbers[user_id].append((id_, site, number, msg.message_id))
-            asyncio.create_task(auto_check_code(user_id, chat_id, msg.message_id, id_, site, number, context))
+            valid_numbers[user_id].append((id_, site, number, msg_id))
+            asyncio.create_task(auto_check_code(user_id, chat_id, msg_id, id_, site, number, context))
         else:
             await context.bot.edit_message_text(
                 f"❌ شماره ناسالم: <code>{number}</code>\n🔄 در حال جستجو برای شماره سالم...",
@@ -164,7 +165,6 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
                     [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
                 ])
             )
-            asyncio.create_task(asyncio.sleep(122, cancel_number(site, id_)))
         await asyncio.sleep(1)
 
     if user_id in cancel_flags:
