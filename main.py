@@ -8,6 +8,7 @@ from telegram.constants import ParseMode
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 )
+from aiohttp import web
 
 logging.basicConfig(level=logging.INFO)
 
@@ -48,12 +49,23 @@ COUNTRIES_24SMS7 = {
     "norway": 174,
     "switzerland": 173,
     "giblarator": 201,
+    "Country Slot 8": 0,
+    "Country Slot 9": 0,
+    "Country Slot 10": 0,
 }
 
 COUNTRIES_SMSBOWER = {
     "Kazakhstan": 2,
-    "cameron": 41,
-    # ... (بقیه کشورها اگر لازم بود اضافه کنید)
+    "Country Slot 1": 0,
+    "Country Slot 2": 0,
+    "try Slot 3": 0,
+    "Country Slot 4": 0,
+    "Country Slot 5": 0,
+    "Country Slot 6": 0,
+    "Country Slot 7": 0,
+    "Country Slot 8": 0,
+    "Country Slot 9": 0,
+    "Country Slot 10": 0,
 }
 
 COUNTRIES_TIGER_SMS = {
@@ -87,6 +99,16 @@ COUNTRIES_TIGER_SMS = {
     "norway": 174,
     "switzerland": 173,
     "giblarator": 201,
+    "peru": 65,
+    "Country Slot 2": 0,
+    "try Slot 3": 0,
+    "england": 16,
+    "uzbekistan": 40,
+    "zimbabwe": 96,
+    "zambie": 147,
+    "bolivi": 92,
+    "Country Slot 9": 0,
+    "Country Slot 10": 0,
 }
 
 OPERATORS = {
@@ -224,10 +246,13 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     cancel_flags.discard(user_id)
     valid_numbers[user_id] = []
-    msg = await query.edit_message_text("⏳ جستجو برای شماره سالم...", reply_markup=InlineKeyboardMarkup([
-        [InlineKeyboardButton("❌ کنسل جستجو", callback_data="cancel_search")],
-        [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
-    ]))
+    msg = await query.edit_message_text(
+        "⏳ جستجو برای شماره سالم...",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("❌ کنسل جستجو", callback_data="cancel_search")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
+        ])
+    )
 
     max_requests = MAX_PARALLEL_REQUESTS.get(site, 1)
 
@@ -245,99 +270,63 @@ async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     cancel_flags.add(user_id)
     valid_numbers[user_id] = []
-
     tasks = search_tasks.get(user_id, [])
     for task in tasks:
         task.cancel()
-    search_tasks.pop(user_id, None)
-
     await query.answer("جستجو لغو شد.")
-    await query.edit_message_text("جستجو لغو شد. برای شروع دوباره /start را ارسال کنید.")
+    await query.edit_message_text("جستجو توسط شما لغو شد.")
 
-async def search_number(user_id, chat_id, msg_id, country_code, site, context, operator=""):
+async def search_number(user_id, chat_id, msg_id, code, site, context, operator):
     while user_id not in cancel_flags:
         if site == "24sms7":
-            number_response = await get_number_24sms7(country_code)
+            res = await get_number_24sms7(code)
         elif site == "smsbower":
-            number_response = await get_number_smsbower(country_code, operator)
+            res = await get_number_smsbower(code, operator)
         elif site == "tiger":
-            number_response = await get_number_tiger(country_code, operator)
+            res = await get_number_tiger(code, operator)
         else:
-            return
+            break
 
-        if number_response.startswith("ACCESS_NUMBER"):
-            parts = number_response.split(":")
-            id_ = parts[1].strip()
-            number = parts[2].strip()
-
-            is_valid = await check_valid(number)
-            if is_valid:
-                valid_numbers.setdefault(user_id, []).append(number)
-                text = f"✅ شماره سالم یافت شد:\n`{number}`\n\n🆔 شماره ID: `{id_}`"
-                await context.bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text=text, parse_mode=ParseMode.MARKDOWN,
-                                                    reply_markup=InlineKeyboardMarkup([
-                                                        [InlineKeyboardButton("لغو شماره", callback_data=f"cancel_{site}_{id_}")]
-                                                    ]))
-                return
-            else:
-                # شماره نامعتبر را لغو کن
-                await cancel_number(site, id_)
-        elif number_response == "NO_NUMBERS":
-            await context.bot.edit_message_text(chat_id=chat_id, message_id=msg_id,
-                                                text="⚠️ شماره‌ای برای کشور و اپراتور انتخاب شده موجود نیست. لطفا کشور یا اپراتور دیگری را انتخاب کنید.",
-                                                reply_markup=InlineKeyboardMarkup([
-                                                    [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
-                                                ]))
-            return
+        if "ACCESS_NUMBER" in res:
+            number = res.split(":")[1]
+            valid = await check_valid(number)
+            if valid:
+                valid_numbers[user_id].append(number)
+                text = f"✅ شماره سالم: `{number}`"
+                keyboard = InlineKeyboardMarkup([
+                    [InlineKeyboardButton("لغو شماره", callback_data=f"cancel_{site}_{number}")]
+                ])
+                await context.bot.edit_message_text(chat_id=chat_id, message_id=msg_id, text=text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
+                break
         else:
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
 
-async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def cancel_number_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    data = query.data
-    _, site, id_ = data.split("_")
     user_id = query.from_user.id
-    # اجازه لغو شماره‌های سالم رو میده
-    await cancel_number(site, id_)
-    if user_id in valid_numbers and valid_numbers[user_id]:
-        try:
-            valid_numbers[user_id].remove(id_)
-        except ValueError:
-            pass
-    await query.edit_message_text("شماره لغو شد. جستجوی شماره ادامه دارد...")
-
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    data = query.data
-
-    if data == "back_to_start":
-        await back_to_start(update, context)
-    elif data == "back_to_sites":
-        await back_to_sites(update, context)
-    elif data == "cancel_search":
-        await cancel_search(update, context)
-    elif data.startswith("site_"):
-        await site_selected(update, context)
-    elif data.startswith("operator_"):
-        parts = data.split("_")
-        site = parts[1]
-        operator = parts[2]
-        await show_countries(update.callback_query, site, context, operator)
-    elif data.startswith("country_"):
-        await country_selected(update, context)
-    elif data.startswith("cancel_"):
-        await dynamic_cancel_number(update, context)
+    data = query.data.split("_")
+    if len(data) == 3 and data[0] == "cancel":
+        site = data[1]
+        number = data[2]
+        await cancel_number(site, number)
+        valid_numbers.get(user_id, []).remove(number)
+        await query.edit_message_text(f"❌ شماره {number} لغو شد.")
 
 async def main():
     nest_asyncio.apply()
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(CallbackQueryHandler(site_selected, pattern=r"^site_"))
+    app.add_handler(CallbackQueryHandler(back_to_start, pattern="back_to_start"))
+    app.add_handler(CallbackQueryHandler(back_to_sites, pattern="back_to_sites"))
+    app.add_handler(CallbackQueryHandler(cancel_search, pattern="cancel_search"))
+    app.add_handler(CallbackQueryHandler(country_selected, pattern=r"^country_"))
+    app.add_handler(CallbackQueryHandler(cancel_number_callback, pattern=r"^cancel_"))
+    app.add_handler(CallbackQueryHandler(site_selected, pattern=r"^operator_"))
 
     await app.run_polling()
 
 if __name__ == "__main__":
     asyncio.run(main())
-
