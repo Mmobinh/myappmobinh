@@ -22,7 +22,7 @@ COUNTRIES_24SMS7 = {
 }
 
 COUNTRIES_SMSBOWER = {
-    "Kazakhstan": 2,
+    "Kazakhstan": 2, "Iran": 57, "Russia": 0, "Ukraine": 1, "Mexico": 54, "Italy": 86, "Spain": 56, "Cameron": 41,
 }
 
 COUNTRIES_TIGER_SMS = {
@@ -189,4 +189,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
