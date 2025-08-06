@@ -98,6 +98,16 @@ COUNTRIES_TIGER_SMS = {
     "norway": 174,
     "switzerland": 173,
     "giblarator": 201,
+    "peru": 65,
+    "Country Slot 2": 0,
+    "try Slot 3": 0,
+    "england": 16,
+    "uzbekistan": 40,
+    "zimbabwe": 96,
+    "zambie": 147,
+    "Country Slot 8": 0,
+    "Country Slot 9": 0,
+    "Country Slot 10": 0,
 }
 
 MAX_PARALLEL_REQUESTS = {
@@ -373,6 +383,7 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
 
 
