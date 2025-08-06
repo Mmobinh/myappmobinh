@@ -118,13 +118,16 @@ async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(site_selected, pattern="^site_"))
-    application.add_handler(CallbackQueryHandler(back_to_sites, pattern="^back_to_sites_"))
+    # اصلاح استفاده از تابع درست در این قسمت
+    application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back_to_sites$")) 
     application.add_handler(CallbackQueryHandler(back_to_start, pattern="^back_to_start$"))
     application.add_handler(CallbackQueryHandler(country_selected, pattern="^country_"))
-    application.add_handler(CallbackQueryHandler(operator_selected, pattern="^operator_"))
-    # Add other handlers here...
+    application.add_handler(CallbackQueryHandler(cancel_search, pattern="^cancel_search$"))
+    application.add_handler(CallbackQueryHandler(dynamic_check_code, pattern="^checkcode_"))
+    application.add_handler(CallbackQueryHandler(dynamic_cancel_number, pattern="^cancel_"))
     await application.run_polling()
 
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
