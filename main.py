@@ -29,18 +29,35 @@ COUNTRIES_24SMS7 = {
     "Kazakhstan": 2,
     "Paraguay": 87,
     "Hong Kong": 14,
-    "Country Slot 1": 0,
-    "Country Slot 2": 0,
-    "Country Slot 3": 0,
-    "Country Slot 4": 0,
-    "Country Slot 5": 0,
+    "macao": 20,
+    "irland": 23,
+    "serbia": 29,
+    "romani": 32,
+    "estonia": 34,
+    "germany": 43,
+    "auustria": 50,
+    "belarus": 51,
+    "tiwan": 55,
+    "newziland": 67,
+    "belgium": 82,
+    "moldova": 85,
+    "armenia": 148,
+    "maldiv": 159,
+    "guadlouap": 160,
+    "denmark": 172,
+    "norway": 174,
+    "switzerland": 173,
+    "giblarator": 201,
+    "Country Slot 8": 0,
+    "Country Slot 9": 0,
+    "Country Slot 10": 0,
 }
 
 COUNTRIES_SMSBOWER = {
     "Kazakhstan": 2,
     "Country Slot 1": 0,
     "Country Slot 2": 0,
-    "Country Slot 3": 0,
+    "try Slot 3": 0,
     "Country Slot 4": 0,
     "Country Slot 5": 0,
     "Country Slot 6": 0,
@@ -333,4 +350,5 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
