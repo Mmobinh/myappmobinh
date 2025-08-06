@@ -113,16 +113,23 @@ COUNTRIES_TIGER_SMS = {
 OPERATORS = {
     "smsbower": {
         "All": "",
-        "MTT": "2195",
-        "SIM4G": "2194",
-        "NTC": "2196",
-        "SMS": "1000",
+        "2195": "2195",
+        "2194": "2194",
+        "2196": "2196",
+        "1000": "1000",
+        "a": "2887",
+        "b": "3134",
+        "c": "2196",
+        "d": "1000",
     },
     "tiger": {
         "All": "",
         "Provider 55": "55",
         "Provider 188": "188",
         "Provider 234": "234",
+        "Provider a": "55",
+        "Provider b": "188",
+        "Provider c": "234",
     }
 }
 
@@ -409,3 +416,4 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
