@@ -102,8 +102,8 @@ async def fetch_url(url):
 async def get_number(site, code, operator):
     base_urls = {
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getNumber&service={SERVICE}&country={code}",
-        "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}",
-        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}",
+        "smsbower": f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&providerIds={operator}",
+        "tiger": f"https://api.tiger-sms.com/stubs/handler_api.php?api_key={API_KEY_TIGER}&action=getNumber&service={SERVICE}&country={code}&providerIds={operator}",
     }
     return await fetch_url(base_urls.get(site, ""))
 
@@ -297,4 +297,5 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
 
