@@ -234,6 +234,9 @@ async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cancel_flags.discard(user_id)
     valid_numbers[user_id] = []
     site, code = query.data.split("_")[1], query.data.split("_")[2]
+    #############################################
+    user_sessions[user_id] = {"site": site}    # ذخیره انتخاب سرویس برای برگشت پس از لغو
+    #############################################
     msg = await query.edit_message_text("⏳ جستجو برای شماره سالم...", reply_markup=InlineKeyboardMarkup([
         [InlineKeyboardButton("❌ کنسل جستجو", callback_data="cancel_search")],
         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
@@ -253,7 +256,18 @@ async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for task in tasks:
         task.cancel()
     search_tasks.pop(user_id, None)
-    await query.edit_message_text("🚫 جستجو لغو شد.")
+    ##############################
+    # برگشت به لیست کشورهای سرویس قبلی
+    site = user_sessions.get(user_id, {}).get("site")
+    if site:
+        countries = COUNTRIES.get(site, {})
+        country_buttons = [InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}") for name, id_ in countries.items()]
+        buttons = chunk_buttons(country_buttons, 3)
+        buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
+        await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
+    else:
+        await query.edit_message_text("🚫 جستجو لغو شد.")
+    ##############################
 
 async def search_number(user_id, chat_id, msg_id, code, site, context):
     async def delayed_cancel(id_, site_):
@@ -301,7 +315,7 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
 
     if user_id in cancel_flags:
         cancel_flags.discard(user_id)
-        await context.bot.edit_message_text("🚫 جستجو لغو شد.", chat_id=chat_id, message_id=msg_id)
+        # بعد از لغو، لازم نیست پیام را تغییر دهیم چون خود cancel_search پیام جدید می‌دهد.
 
 async def auto_check_code(user_id, chat_id, msg_id, id_, site, number, context):
     while True:
@@ -327,30 +341,8 @@ async def dynamic_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE)
             if resp.startswith("STATUS_OK:"):
                 code = resp[len("STATUS_OK:"):].strip()
                 await context.bot.edit_message_text(
-                    f"📩 کد برای شماره <code>{number}</code> دریافت شد:\n<code>{code}</code>",
-                    chat_id=query.message.chat_id, message_id=msg_id, parse_mode=ParseMode.HTML
-                )
-            elif resp == "STATUS_WAIT_CODE":
-                await query.answer("⏳ هنوز کدی دریافت نشده.", show_alert=True)
-            else:
-                await query.answer("❌ خطا در دریافت کد.", show_alert=True)
-            break
-
-#### اصلاح شده: حذف شماره با حذف صحیح پیام و شماره از لیست کاربر
-async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = query.from_user.id
-    await query.answer()
-    id_ = query.data.split("_")[1]
-    new_list = []
-    for rec in valid_numbers.get(user_id, []):
-        if rec[0] == id_:
-            await cancel_number(rec[1], rec[0])
-            try:
-                # حذف یا ویرایش پیام شماره سالم
-                await context.bot.edit_message_text(
                     f"❌ شماره لغو شد: <code>{rec[2]}</code>",
-                    chat_id=query.message.chat_id, message_id=rec[3], parse_mode=ParseMode.HTML,
+                    chat_id=query.message.chat.id, message_id=rec[3], parse_mode=ParseMode.HTML,
                     reply_markup=InlineKeyboardMarkup([
                         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
                     ])
@@ -391,6 +383,3 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
-
-
