@@ -21,35 +21,8 @@ SERVICE = "tg"
 
 COUNTRIES = {
     "24sms7": {
-            "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
-    "macao": 20,
-    "irland": 23,
-    "serbia": 29,
-    "romani": 32,
-    "estonia": 34,
-    "germany": 43,
-    "auustria": 50,
-    "belarus": 51,
-    "tiwan": 55,
-    "newziland": 67,
-    "belgium": 82,
-    "moldova": 85,
-    "armenia": 148,
-    "maldiv": 159,
-    "guadlouap": 160,
-    "denmark": 172,
-    "norway": 174,
-    "switzerland": 173,
-    "giblarator": 201,
+        "Iran": 57, "Russia": 0, "Ukraine": 1, "Kazakhstan": 2, "Mexico": 54,
+        "Italy": 86, "Spain": 56, "Czech Republic": 63
         # Add other countries here
     },
     "smsbower": {
@@ -57,35 +30,8 @@ COUNTRIES = {
         # Add more countries here
     },
     "tiger": {
-            "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
-    "macao": 20,
-    "irland": 23,
-    "serbia": 29,
-    "romani": 32,
-    "estonia": 34,
-    "germany": 43,
-    "auustria": 50,
-    "belarus": 51,
-    "tiwan": 55,
-    "newziland": 67,
-    "belgium": 82,
-    "moldova": 85,
-    "armenia": 148,
-    "maldiv": 159,
-    "guadlouap": 160,
-    "denmark": 172,
-    "norway": 174,
-    "switzerland": 173,
-    "giblarator": 201,
+        "Iran": 57, "Russia": 0, "Ukraine": 1, "Kazakhstan": 2, "Paraguay": 87,
+        "Hong Kong": 14, "Ireland": 23
         # Add other countries here
     }
 }
@@ -160,7 +106,7 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     country_buttons = [InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}") for name, id_ in countries.items()]
     buttons = chunk_buttons(country_buttons, 3)
-    buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")])
+    buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
 
 # Utility function to chunk button list
@@ -170,12 +116,34 @@ def chunk_buttons(button_list, n):
 async def back_to_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await start(query.message, context)
+    # برگشت به لیست سرویس‌ها
+    buttons = [[InlineKeyboardButton(site.capitalize(), callback_data=f"site_{site}")] for site in COUNTRIES.keys()]
+    await query.edit_message_text("🌐 انتخاب سرویس:", reply_markup=InlineKeyboardMarkup(buttons))
 
+# -------------------- جدید: برگشت به انتخاب کشور برای یک سرویس --------------------
 async def back_to_sites(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    await site_selected(query, context)
+    # قبلاً کاربر انتخاب کشور کرده، باید به لیست کشورهای همان سرویس برگردد
+    # این اطلاعات را از متن قبلی می‌خوانیم
+    if hasattr(query, 'message') and query.message and query.message.reply_markup:
+        # سعی می‌کنیم سرویس را بیابیم
+        # پیام قبلی حاوی باتن‌های کشور است. متن دکمه‌ها مشابه کشورها است.
+        # از متن دکمه یک کشور callback_data می‌خوانیم تا سرویس را پیدا کنیم.
+        # در دل reply_markup inline_keyboard اولین کلید را می‌خوانیم
+        for row in query.message.reply_markup.inline_keyboard:
+            for btn in row:
+                if btn.callback_data and btn.callback_data.startswith("country_"):
+                    site = btn.callback_data.split("_")[1]
+                    countries = COUNTRIES.get(site, {})
+                    country_buttons = [InlineKeyboardButton(name, callback_data=f"country_{site}_{id_}") for name, id_ in countries.items()]
+                    buttons = chunk_buttons(country_buttons, 3)
+                    buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
+                    await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
+                    return
+    # اگر به هر دلیلی پیدا نکرد، به start برمی‌گردد
+    await back_to_start(update, context)
+# -------------------------------------------------------------------------------
 
 async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -285,6 +253,7 @@ async def dynamic_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 await query.answer("❌ خطا در دریافت کد.", show_alert=True)
             break
 
+#### اصلاح شده: حذف شماره با حذف صحیح پیام و شماره از لیست کاربر
 async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
@@ -294,10 +263,18 @@ async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TY
     for rec in valid_numbers.get(user_id, []):
         if rec[0] == id_:
             await cancel_number(rec[1], rec[0])
-            await context.bot.edit_message_text(
-                f"❌ شماره لغو شد: <code>{rec[2]}</code>",
-                chat_id=query.message.chat_id, message_id=rec[3], parse_mode=ParseMode.HTML
-            )
+            try:
+                # حذف یا ویرایش پیام شماره سالم
+                await context.bot.edit_message_text(
+                    f"❌ شماره لغو شد: <code>{rec[2]}</code>",
+                    chat_id=query.message.chat_id, message_id=rec[3], parse_mode=ParseMode.HTML,
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
+                    ])
+                )
+            except Exception as e:
+                logging.error(f"Error editing message: {e}")
+            # شماره را حذف کن (در else پایین new_list نیاید)
         else:
             new_list.append(rec)
     valid_numbers[user_id] = new_list
@@ -331,4 +308,3 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
-
