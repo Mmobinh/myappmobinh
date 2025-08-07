@@ -21,8 +21,35 @@ SERVICE = "tg"
 
 COUNTRIES = {
     "24sms7": {
-        "Iran": 57, "Russia": 0, "Ukraine": 1, "Kazakhstan": 2, "Mexico": 54,
-        "Italy": 86, "Spain": 56, "Czech Republic": 63
+            "Iran": 57,
+    "Russia": 0,
+    "Ukraine": 1,
+    "Mexico": 54,
+    "Italy": 86,
+    "Spain": 56,
+    "Czech Republic": 63,
+    "Kazakhstan": 2,
+    "Paraguay": 87,
+    "Hong Kong": 14,
+    "macao": 20,
+    "irland": 23,
+    "serbia": 29,
+    "romani": 32,
+    "estonia": 34,
+    "germany": 43,
+    "auustria": 50,
+    "belarus": 51,
+    "tiwan": 55,
+    "newziland": 67,
+    "belgium": 82,
+    "moldova": 85,
+    "armenia": 148,
+    "maldiv": 159,
+    "guadlouap": 160,
+    "denmark": 172,
+    "norway": 174,
+    "switzerland": 173,
+    "giblarator": 201,
         # Add other countries here
     },
     "smsbower": {
@@ -30,8 +57,35 @@ COUNTRIES = {
         # Add more countries here
     },
     "tiger": {
-        "Iran": 57, "Russia": 0, "Ukraine": 1, "Kazakhstan": 2, "Paraguay": 87,
-        "Hong Kong": 14, "Ireland": 23
+            "Iran": 57,
+    "Russia": 0,
+    "Ukraine": 1,
+    "Mexico": 54,
+    "Italy": 86,
+    "Spain": 56,
+    "Czech Republic": 63,
+    "Kazakhstan": 2,
+    "Paraguay": 87,
+    "Hong Kong": 14,
+    "macao": 20,
+    "irland": 23,
+    "serbia": 29,
+    "romani": 32,
+    "estonia": 34,
+    "germany": 43,
+    "auustria": 50,
+    "belarus": 51,
+    "tiwan": 55,
+    "newziland": 67,
+    "belgium": 82,
+    "moldova": 85,
+    "armenia": 148,
+    "maldiv": 159,
+    "guadlouap": 160,
+    "denmark": 172,
+    "norway": 174,
+    "switzerland": 173,
+    "giblarator": 201,
         # Add other countries here
     }
 }
@@ -277,3 +331,4 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
