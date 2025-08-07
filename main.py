@@ -335,19 +335,21 @@ async def dynamic_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.answer()
     id_ = query.data.split("_")[1]
     for rec in valid_numbers.get(user_id, []):
-        if rec[0] == id_:
-            _, site, number, msg_id = rec
-            resp = await get_code(site, id_)
-            if resp.startswith("STATUS_OK:"):
-                code = resp[len("STATUS_OK:"):].strip()
-                await context.bot.edit_message_text(
-                    f"❌ شماره لغو شد: <code>{rec[2]}</code>",
-                    chat_id=query.message.chat.id, message_id=rec[3], parse_mode=ParseMode.HTML,
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
-                    ])
-                )
-            except Exception as e:
+    if rec[0] == id_:
+        await cancel_number(rec[1], rec[0])
+        try:
+            await context.bot.edit_message_text(
+                f"❌ شماره لغو شد: <code>{rec[2]}</code>",
+                chat_id=query.message.chat.id, message_id=rec[3], parse_mode=ParseMode.HTML,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
+                ])
+            )
+        except Exception as e:
+            logging.error(f"Error editing message: {e}")
+        # شماره را حذف کن (در else پایین new_list نیاید)
+    else:
+        new_list.append(rec)
                 logging.error(f"Error editing message: {e}")
             # شماره را حذف کن (در else پایین new_list نیاید)
         else:
@@ -383,3 +385,4 @@ async def main():
 if __name__ == "__main__":
     nest_asyncio.apply()
     asyncio.run(main())
+
