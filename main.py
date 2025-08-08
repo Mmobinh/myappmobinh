@@ -21,101 +21,98 @@ SERVICE = "tg"
 
 COUNTRIES = {
     "24sms7": {
-            "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
-    "macao": 20,
-    "irland": 23,
-    "serbia": 29,
-    "romani": 32,
-    "estonia": 34,
-    "germany": 43,
-    "auustria": 50,
-    "belarus": 51,
-    "tiwan": 55,
-    "newziland": 67,
-    "belgium": 82,
-    "moldova": 85,
-    "armenia": 148,
-    "maldiv": 159,
-    "guadlouap": 160,
-    "denmark": 172,
-    "norway": 174,
-    "switzerland": 173,
-    "giblarator": 201,
-        # Add other countries here
+        "Iran": 57,
+        "Russia": 0,
+        "Ukraine": 1,
+        "Mexico": 54,
+        "Italy": 86,
+        "Spain": 56,
+        "Czech Republic": 63,
+        "Kazakhstan": 2,
+        "Paraguay": 87,
+        "Hong Kong": 14,
+        "macao": 20,
+        "irland": 23,
+        "serbia": 29,
+        "romani": 32,
+        "estonia": 34,
+        "germany": 43,
+        "auustria": 50,
+        "belarus": 51,
+        "tiwan": 55,
+        "newziland": 67,
+        "belgium": 82,
+        "moldova": 85,
+        "armenia": 148,
+        "maldiv": 159,
+        "guadlouap": 160,
+        "denmark": 172,
+        "norway": 174,
+        "switzerland": 173,
+        "giblarator": 201,
     },
     "smsbower": {
         "Kazakhstan": 2,
-      "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
-    "macao": 20,
-    "irland": 23,
-    "serbia": 29,
-    "romani": 32,
-    "estonia": 34,
-    "germany": 43,
-    "auustria": 50,
-    "belarus": 51,
-    "tiwan": 55,
-    "newziland": 67,
-    "belgium": 82,
-    "moldova": 85,
-    "armenia": 148,
-    "maldiv": 159,
-    "guadlouap": 160,
-    "denmark": 172,
-    "norway": 174,
-    "switzerland": 173,
-    "giblarator": 201,
-        # Add more countries here
+        "Iran": 57,
+        "Russia": 0,
+        "Ukraine": 1,
+        "Mexico": 54,
+        "Italy": 86,
+        "Spain": 56,
+        "Czech Republic": 63,
+        "Kazakhstan": 2,
+        "Paraguay": 87,
+        "Hong Kong": 14,
+        "macao": 20,
+        "irland": 23,
+        "serbia": 29,
+        "romani": 32,
+        "estonia": 34,
+        "germany": 43,
+        "auustria": 50,
+        "belarus": 51,
+        "tiwan": 55,
+        "newziland": 67,
+        "belgium": 82,
+        "moldova": 85,
+        "armenia": 148,
+        "maldiv": 159,
+        "guadlouap": 160,
+        "denmark": 172,
+        "norway": 174,
+        "switzerland": 173,
+        "giblarator": 201,
     },
     "tiger": {
-            "Iran": 57,
-    "Russia": 0,
-    "Ukraine": 1,
-    "Mexico": 54,
-    "Italy": 86,
-    "Spain": 56,
-    "Czech Republic": 63,
-    "Kazakhstan": 2,
-    "Paraguay": 87,
-    "Hong Kong": 14,
-    "macao": 20,
-    "irland": 23,
-    "serbia": 29,
-    "romani": 32,
-    "estonia": 34,
-    "germany": 43,
-    "auustria": 50,
-    "belarus": 51,
-    "tiwan": 55,
-    "newziland": 67,
-    "belgium": 82,
-    "moldova": 85,
-    "armenia": 148,
-    "maldiv": 159,
-    "guadlouap": 160,
-    "denmark": 172,
-    "norway": 174,
-    "switzerland": 173,
-    "giblarator": 201,
-        # Add other countries here
+        "Iran": 57,
+        "Russia": 0,
+        "Ukraine": 1,
+        "Mexico": 54,
+        "Italy": 86,
+        "Spain": 56,
+        "Czech Republic": 63,
+        "Kazakhstan": 2,
+        "Paraguay": 87,
+        "Hong Kong": 14,
+        "macao": 20,
+        "irland": 23,
+        "serbia": 29,
+        "romani": 32,
+        "estonia": 34,
+        "germany": 43,
+        "auustria": 50,
+        "belarus": 51,
+        "tiwan": 55,
+        "newziland": 67,
+        "belgium": 82,
+        "moldova": 85,
+        "armenia": 148,
+        "maldiv": 159,
+        "guadlouap": 160,
+        "denmark": 172,
+        "norway": 174,
+        "switzerland": 173,
+        "giblarator": 201,
     }
 }
 
@@ -140,7 +137,6 @@ async def fetch_url(url):
         logging.error(f"Error fetching URL {url}: {e}")
         return "ERROR"
 
-# Retrieve phone number function
 async def get_number(site, code):
     base_urls = {
         "24sms7": f"https://24sms7.com/stubs/handler_api.php?api_key={API_KEY_24SMS7}&action=getNumber&service={SERVICE}&country={code}",
@@ -165,7 +161,6 @@ async def cancel_number(site, id_):
     }[site]
     await fetch_url(url)
 
-# Check if a number is valid
 async def check_valid(number):
     url = "http://checker.irbots.com:2021/check"
     params = {"key": CHECKER_API_KEY, "numbers": number.strip("+")}
@@ -176,7 +171,6 @@ async def check_valid(number):
                 return data.get("status") == "ok" and data["data"].get(f"+{number.strip('+')}", False) is True
     return False
 
-# Define the handlers
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons = [[InlineKeyboardButton(site.capitalize(), callback_data=f"site_{site}")] for site in COUNTRIES.keys()]
     await update.message.reply_text("🌐 انتخاب سرویس:", reply_markup=InlineKeyboardMarkup(buttons))
@@ -192,28 +186,19 @@ async def site_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
 
-# Utility function to chunk button list
 def chunk_buttons(button_list, n):
     return [button_list[i:i + n] for i in range(0, len(button_list), n)]
 
 async def back_to_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    # برگشت به لیست سرویس‌ها
     buttons = [[InlineKeyboardButton(site.capitalize(), callback_data=f"site_{site}")] for site in COUNTRIES.keys()]
     await query.edit_message_text("🌐 انتخاب سرویس:", reply_markup=InlineKeyboardMarkup(buttons))
 
-# -------------------- جدید: برگشت به انتخاب کشور برای یک سرویس --------------------
 async def back_to_sites(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    # قبلاً کاربر انتخاب کشور کرده، باید به لیست کشورهای همان سرویس برگردد
-    # این اطلاعات را از متن قبلی می‌خوانیم
     if hasattr(query, 'message') and query.message and query.message.reply_markup:
-        # سعی می‌کنیم سرویس را بیابیم
-        # پیام قبلی حاوی باتن‌های کشور است. متن دکمه‌ها مشابه کشورها است.
-        # از متن دکمه یک کشور callback_data می‌خوانیم تا سرویس را پیدا کنیم.
-        # در دل reply_markup inline_keyboard اولین کلید را می‌خوانیم
         for row in query.message.reply_markup.inline_keyboard:
             for btn in row:
                 if btn.callback_data and btn.callback_data.startswith("country_"):
@@ -224,9 +209,7 @@ async def back_to_sites(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     buttons.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_start")])
                     await query.edit_message_text("🌍 انتخاب کشور:", reply_markup=InlineKeyboardMarkup(buttons))
                     return
-    # اگر به هر دلیلی پیدا نکرد، به start برمی‌گردد
     await back_to_start(update, context)
-# -------------------------------------------------------------------------------
 
 async def country_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -336,7 +319,6 @@ async def dynamic_check_code(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 await query.answer("❌ خطا در دریافت کد.", show_alert=True)
             break
 
-#### اصلاح شده: حذف شماره با حذف صحیح پیام و شماره از لیست کاربر
 async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = query.from_user.id
@@ -347,7 +329,6 @@ async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TY
         if rec[0] == id_:
             await cancel_number(rec[1], rec[0])
             try:
-                # حذف یا ویرایش پیام شماره سالم
                 await context.bot.edit_message_text(
                     f"❌ شماره لغو شد: <code>{rec[2]}</code>",
                     chat_id=query.message.chat_id, message_id=rec[3], parse_mode=ParseMode.HTML,
@@ -357,12 +338,9 @@ async def dynamic_cancel_number(update: Update, context: ContextTypes.DEFAULT_TY
                 )
             except Exception as e:
                 logging.error(f"Error editing message: {e}")
-            # شماره را حذف کن (در else پایین new_list نیاید)
         else:
             new_list.append(rec)
     valid_numbers[user_id] = new_list
-
-# Web server to keep the bot alive
 async def web_handler(request):
     return web.Response(text="✅ Bot is Alive!")
 
@@ -374,7 +352,6 @@ async def start_webserver():
     site = web.TCPSite(runner, "0.0.0.0", 8080)
     await site.start()
 
-# Main function to start the bot
 async def main():
     await start_webserver()
     application = ApplicationBuilder().token(BOT_TOKEN).build()
