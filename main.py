@@ -272,6 +272,11 @@ async def start_webserver():
 
 async def main():
     await start_webserver()
+    if __name__ == "__main__":
+    import nest_asyncio
+    nest_asyncio.apply()
+    import asyncio
+    asyncio.run(main())
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -285,3 +290,4 @@ async def main():
     application.add_handler(CallbackQueryHandler(dynamic_cancel_number, pattern="^cancel_"))
 
     await application.run_polling()
+
