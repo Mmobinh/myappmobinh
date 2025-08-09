@@ -30,7 +30,7 @@ COUNTRIES = {
               "guadlouap":160,"denmark":172,"norway":174,"switzerland":173,"giblarator":201}
 }
 
-MAX_PARALLEL_REQUESTS = {"24sms7":1,"smsbower":5,"tiger":1}
+MAX_PARALLEL_REQUESTS = {"24sms7":2,"smsbower":5,"tiger":1}
 
 user_sessions = {}
 search_tasks = {}
@@ -135,6 +135,28 @@ async def cancel_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     search_tasks.pop(user_id, None)
     await query.edit_message_text("🚫 جستجو لغو شد.")
 
+async def start_timer(chat_id, msg_id, number, context):
+    total_seconds = 1500  # 25 minutes
+    while total_seconds >= 0:
+        mins, secs = divmod(total_seconds, 60)
+        timer_text = f"⏳ زمان باقی‌مانده: {mins:02}:{secs:02}"
+        try:
+            await context.bot.edit_message_text(
+                f"📱 شماره سالم: <code>{number}</code>\n{timer_text}",
+                chat_id=chat_id,
+                message_id=msg_id,
+                parse_mode=ParseMode.HTML,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("📩 دریافت کد", callback_data=f"checkcode_{msg_id}")],
+                    [InlineKeyboardButton("❌ لغو شماره", callback_data=f"cancel_{msg_id}")],
+                    [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_sites")]
+                ])
+            )
+        except:
+            break
+        await asyncio.sleep(1)
+        total_seconds -= 1
+
 async def search_number(user_id, chat_id, msg_id, code, site, context):
     async def delayed_cancel(id_, site_):
         await asyncio.sleep(122)
@@ -165,6 +187,7 @@ async def search_number(user_id, chat_id, msg_id, code, site, context):
             )
             valid_numbers[user_id].append((id_, site, number, msg.message_id))
             asyncio.create_task(auto_check_code(user_id, chat_id, msg.message_id, id_, site, number, context))
+            asyncio.create_task(start_timer(chat_id, msg.message_id, number, context))
         else:
             await context.bot.edit_message_text(
                 f"❌ شماره ناسالم: <code>{number}</code>\n🔄 در حال جستجو برای شماره سالم...",
@@ -242,4 +265,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
