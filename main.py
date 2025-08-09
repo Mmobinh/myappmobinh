@@ -38,7 +38,7 @@ cancel_flags = set()
 valid_numbers = {}
 
 async def fetch_url(url):
-try:
+    try:
 async with aiohttp.ClientSession() as session:
 async with session.get(url) as resp:
 return await resp.text()
@@ -242,3 +242,4 @@ app.run_polling()
 
 if name == "main":
 main()
+
