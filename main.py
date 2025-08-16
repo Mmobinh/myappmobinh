@@ -52,7 +52,7 @@ async def fetch_url(url):
 
 # --- smsbower endpoints (only) ---
 async def get_number_smb(code):
-    url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&phoneException=7700,7708"
+    url = f"https://smsbower.online/stubs/handler_api.php?api_key={API_KEY_SMSBOWER}&action=getNumber&service={SERVICE}&country={code}&providerIds=2285phoneException=7700,7708"
     return await fetch_url(url)
 
 async def get_code_smb(id_):
@@ -313,6 +313,7 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         logging.info("Bot stopped by user")
+
 
 
 
